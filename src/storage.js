@@ -1,9 +1,15 @@
+import { PROFILE, PILLARS } from './profile.js';
+import { GROWTH_PLAYS, suggestClipsFromFormulas, buildWeeklyPlan } from './playbook.js';
+
 const KEYS = {
-  strategy: 'cadence.strategy',
-  pieces: 'cadence.pieces',
-  ideas: 'cadence.ideas',
-  settings: 'cadence.settings',
-  onboarding: 'cadence.onboardingDone'
+  meta: 'sense.meta',
+  scoreboard: 'sense.scoreboard',
+  clips: 'sense.clips',
+  plays: 'sense.plays',
+  checklist: 'sense.dayChecklist',
+  notes: 'sense.notes',
+  settings: 'sense.settings',
+  seeded: 'sense.seeded.v2'
 };
 
 function read(key, fallback) {
@@ -24,194 +30,219 @@ function uid(prefix = 'id') {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const DEFAULT_STRATEGY = {
-  brandName: '',
-  niche: '',
-  audience: '',
-  primaryGoal: 'leads', // traffic | leads | authority | sales
-  secondaryGoal: '',
-  platforms: ['blog', 'linkedin'],
-  cadencePerWeek: 3,
-  pillars: [],
-  voiceNotes: '',
-  successMetric: '',
+const DEFAULT_SCOREBOARD = {
+  twitchFollowers: null,
+  twitchAvgViewers: null,
+  tiktokViewsWeek: null,
+  tiktokFollowers: null,
+  youtubeSubs: null,
+  history: [], // { date, twitchAvgViewers, tiktokViewsWeek, note }
   updatedAt: null
 };
 
 const DEFAULT_SETTINGS = {
-  weekStartsOn: 1, // Monday
-  defaultPlatform: 'blog',
-  showSetupTips: true
+  varietyDay: 6, // Saturday
+  clipsPerSiegeDay: 3,
+  showManagerTone: true
 };
 
 export const Storage = {
-  isOnboardingDone() {
-    return read(KEYS.onboarding, false) === true;
+  ensureSeeded() {
+    if (read(KEYS.seeded, false)) return false;
+    this.seed();
+    write(KEYS.seeded, true);
+    return true;
   },
 
-  completeOnboarding() {
-    write(KEYS.onboarding, true);
+  seed() {
+    write(KEYS.meta, {
+      client: PROFILE.displayName,
+      seededAt: new Date().toISOString(),
+      version: 2
+    });
+    write(KEYS.scoreboard, { ...DEFAULT_SCOREBOARD });
+    write(KEYS.plays, GROWTH_PLAYS.map((p) => ({
+      ...p,
+      progress: p.status === 'core' ? 'running' : 'queued',
+      logs: []
+    })));
+    write(KEYS.clips, suggestClipsFromFormulas(6).map((c) => ({
+      ...c,
+      id: uid('clip'),
+      createdAt: new Date().toISOString(),
+      pillarId: PILLARS[0].id
+    })));
+    write(KEYS.checklist, {});
+    write(KEYS.notes, []);
+    write(KEYS.settings, { ...DEFAULT_SETTINGS });
   },
 
-  resetOnboarding() {
-    write(KEYS.onboarding, false);
+  resetAll() {
+    Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+    this.ensureSeeded();
   },
 
-  getStrategy() {
-    return { ...DEFAULT_STRATEGY, ...read(KEYS.strategy, {}) };
-  },
-
-  saveStrategy(strategy) {
-    const next = {
-      ...DEFAULT_STRATEGY,
-      ...strategy,
-      updatedAt: new Date().toISOString()
-    };
-    write(KEYS.strategy, next);
-    return next;
+  getProfile() {
+    return PROFILE;
   },
 
   getSettings() {
     return { ...DEFAULT_SETTINGS, ...read(KEYS.settings, {}) };
   },
 
-  saveSettings(settings) {
-    const next = { ...DEFAULT_SETTINGS, ...settings };
+  saveSettings(patch) {
+    const next = { ...this.getSettings(), ...patch };
     write(KEYS.settings, next);
     return next;
   },
 
-  getIdeas() {
-    return read(KEYS.ideas, []);
+  getScoreboard() {
+    return { ...DEFAULT_SCOREBOARD, ...read(KEYS.scoreboard, {}) };
   },
 
-  saveIdeas(ideas) {
-    write(KEYS.ideas, ideas);
-    return ideas;
-  },
-
-  addIdea(idea) {
-    const ideas = this.getIdeas();
-    const item = {
-      id: uid('idea'),
-      title: '',
-      notes: '',
-      pillarId: null,
-      platform: null,
-      score: 0,
-      createdAt: new Date().toISOString(),
-      ...idea
-    };
-    ideas.unshift(item);
-    this.saveIdeas(ideas);
-    return item;
-  },
-
-  updateIdea(id, patch) {
-    const ideas = this.getIdeas();
-    const idx = ideas.findIndex((i) => i.id === id);
-    if (idx === -1) return null;
-    ideas[idx] = { ...ideas[idx], ...patch, updatedAt: new Date().toISOString() };
-    this.saveIdeas(ideas);
-    return ideas[idx];
-  },
-
-  deleteIdea(id) {
-    this.saveIdeas(this.getIdeas().filter((i) => i.id !== id));
-  },
-
-  getPieces() {
-    return read(KEYS.pieces, []);
-  },
-
-  savePieces(pieces) {
-    write(KEYS.pieces, pieces);
-    return pieces;
-  },
-
-  addPiece(piece) {
-    const pieces = this.getPieces();
-    const item = {
-      id: uid('piece'),
-      title: '',
-      status: 'idea', // idea | planned | drafting | ready | published | measured
-      platform: 'blog',
-      pillarId: null,
-      funnel: 'tofu', // tofu | mofu | bofu
-      publishDate: null,
-      keywords: [],
-      hook: '',
-      promise: '',
-      outline: '',
-      cta: '',
-      proofPoints: '',
-      notes: '',
-      checklist: {
-        clearHook: false,
-        onePromise: false,
-        proofIncluded: false,
-        ctaDefined: false,
-        seoBasics: false,
-        distributionPlan: false
-      },
-      results: {
-        views: null,
-        clicks: null,
-        leads: null,
-        conversions: null,
-        notes: '',
-        loggedAt: null
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ...piece
-    };
-    pieces.unshift(item);
-    this.savePieces(pieces);
-    return item;
-  },
-
-  updatePiece(id, patch) {
-    const pieces = this.getPieces();
-    const idx = pieces.findIndex((p) => p.id === id);
-    if (idx === -1) return null;
-    pieces[idx] = {
-      ...pieces[idx],
+  saveScoreboard(patch) {
+    const prev = this.getScoreboard();
+    const next = {
+      ...prev,
       ...patch,
-      checklist: { ...pieces[idx].checklist, ...(patch.checklist || {}) },
-      results: { ...pieces[idx].results, ...(patch.results || {}) },
       updatedAt: new Date().toISOString()
     };
-    this.savePieces(pieces);
-    return pieces[idx];
+    write(KEYS.scoreboard, next);
+    return next;
   },
 
-  deletePiece(id) {
-    this.savePieces(this.getPieces().filter((p) => p.id !== id));
+  logScoreboardSnapshot(note = '') {
+    const s = this.getScoreboard();
+    const entry = {
+      id: uid('snap'),
+      date: new Date().toISOString().slice(0, 10),
+      twitchAvgViewers: s.twitchAvgViewers,
+      tiktokViewsWeek: s.tiktokViewsWeek,
+      twitchFollowers: s.twitchFollowers,
+      note
+    };
+    const history = [entry, ...(s.history || [])].slice(0, 60);
+    return this.saveScoreboard({ history });
+  },
+
+  getClips() {
+    return read(KEYS.clips, []);
+  },
+
+  saveClips(clips) {
+    write(KEYS.clips, clips);
+    return clips;
+  },
+
+  addClip(clip) {
+    const clips = this.getClips();
+    const item = {
+      id: uid('clip'),
+      title: '',
+      caption: '',
+      platform: 'tiktok',
+      alsoPost: 'youtube',
+      formulaId: null,
+      pillarId: PILLARS[0].id,
+      status: 'todo', // todo | editing | posted | winner | killed
+      views: null,
+      tip: '',
+      streamDate: null,
+      createdAt: new Date().toISOString(),
+      ...clip
+    };
+    clips.unshift(item);
+    this.saveClips(clips);
+    return item;
+  },
+
+  updateClip(id, patch) {
+    const clips = this.getClips();
+    const idx = clips.findIndex((c) => c.id === id);
+    if (idx === -1) return null;
+    clips[idx] = { ...clips[idx], ...patch, updatedAt: new Date().toISOString() };
+    this.saveClips(clips);
+    return clips[idx];
+  },
+
+  deleteClip(id) {
+    this.saveClips(this.getClips().filter((c) => c.id !== id));
+  },
+
+  getPlays() {
+    return read(KEYS.plays, []);
+  },
+
+  savePlays(plays) {
+    write(KEYS.plays, plays);
+    return plays;
+  },
+
+  updatePlay(id, patch) {
+    const plays = this.getPlays();
+    const idx = plays.findIndex((p) => p.id === id);
+    if (idx === -1) return null;
+    plays[idx] = { ...plays[idx], ...patch };
+    this.savePlays(plays);
+    return plays[idx];
+  },
+
+  logPlay(id, note) {
+    const play = this.getPlays().find((p) => p.id === id);
+    if (!play) return null;
+    const logs = [{ at: new Date().toISOString(), note }, ...(play.logs || [])].slice(0, 20);
+    return this.updatePlay(id, { logs, progress: 'running' });
+  },
+
+  getChecklist() {
+    return read(KEYS.checklist, {});
+  },
+
+  toggleChecklist(dateKey, actionIndex) {
+    const all = this.getChecklist();
+    const day = { ...(all[dateKey] || {}) };
+    day[actionIndex] = !day[actionIndex];
+    all[dateKey] = day;
+    write(KEYS.checklist, all);
+    return all;
+  },
+
+  getNotes() {
+    return read(KEYS.notes, []);
+  },
+
+  addNote(text) {
+    const notes = this.getNotes();
+    notes.unshift({ id: uid('note'), text, at: new Date().toISOString() });
+    write(KEYS.notes, notes.slice(0, 100));
+    return notes;
+  },
+
+  getWeekPlan() {
+    return buildWeeklyPlan(new Date());
   },
 
   exportAll() {
     return {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
-      strategy: this.getStrategy(),
-      pieces: this.getPieces(),
-      ideas: this.getIdeas(),
-      settings: this.getSettings(),
-      onboardingDone: this.isOnboardingDone()
+      scoreboard: this.getScoreboard(),
+      clips: this.getClips(),
+      plays: this.getPlays(),
+      checklist: this.getChecklist(),
+      notes: this.getNotes(),
+      settings: this.getSettings()
     };
   },
 
   importAll(data) {
-    if (!data || typeof data !== 'object') throw new Error('Invalid import data');
-    if (data.strategy) write(KEYS.strategy, data.strategy);
-    if (data.pieces) write(KEYS.pieces, data.pieces);
-    if (data.ideas) write(KEYS.ideas, data.ideas);
+    if (!data || typeof data !== 'object') throw new Error('Invalid import');
+    if (data.scoreboard) write(KEYS.scoreboard, data.scoreboard);
+    if (data.clips) write(KEYS.clips, data.clips);
+    if (data.plays) write(KEYS.plays, data.plays);
+    if (data.checklist) write(KEYS.checklist, data.checklist);
+    if (data.notes) write(KEYS.notes, data.notes);
     if (data.settings) write(KEYS.settings, data.settings);
-    if (typeof data.onboardingDone === 'boolean') write(KEYS.onboarding, data.onboardingDone);
-  },
-
-  clearAll() {
-    Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+    write(KEYS.seeded, true);
   }
 };

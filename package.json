@@ -1,8 +1,8 @@
 {
-  "name": "cadence",
-  "productName": "Cadence",
-  "version": "1.0.0",
-  "description": "A results-driven content planner — strategy, briefs, calendar, pipeline, and performance tracking.",
+  "name": "sense-desk",
+  "productName": "Sense Desk",
+  "version": "2.0.0",
+  "description": "Quicksense social media manager — weekly strategy, clip factory, growth plays, scoreboard.",
   "main": "main.js",
   "author": "Quicksense",
   "license": "UNLICENSED",
@@ -20,8 +20,8 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.quicksense.cadence",
-    "productName": "Cadence",
+    "appId": "com.quicksense.sensedesk",
+    "productName": "Sense Desk",
     "directories": {
       "output": "release"
     },

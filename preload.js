@@ -1,6 +1,6 @@
 const { contextBridge } = require('electron');
 
-contextBridge.exposeInMainWorld('cadenceNative', {
+contextBridge.exposeInMainWorld('senseNative', {
   platform: process.platform,
   version: process.versions.electron
 });
