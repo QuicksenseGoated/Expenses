@@ -1,72 +1,70 @@
-# Ledger
+# Cadence
 
-A personal expense & subscription tracker — obsidian dark theme, auto-assigned
-gradient accents, billing countdown rings, and a smart product search that
-autofills pricing for common subscriptions (Cursor, Netflix, Spotify, etc.).
+A results-driven content planner — strategy first, then ideas, briefs, calendar, pipeline, and measured outcomes.
 
-This is a real desktop app (Electron), not a single HTML file — the UI code
-lives in `src/` as plain ES modules and Electron just wraps it in a native
-window so you get a proper installable app on Mac/Windows/Linux.
+Most content calendars fail because they start with “what should we post?” Cadence starts with the outcome (traffic, leads, authority, or sales), locks 3–5 pillars, forces a real brief (hook → promise → proof → CTA), and makes you log results so winners get repeated.
+
+This is a desktop app (Electron). The UI lives in `src/` as plain ES modules; Electron wraps it in a native window. You can also open it in a browser for quick use.
+
+## How to get real results with it
+
+1. **Finish the setup wizard** — one primary goal, a specific audience, 3–5 pillars, and a weekly cadence you can keep for 8 weeks.
+2. **Capture ideas freely**, then only promote the strong ones into briefs.
+3. **Write the brief before the draft** — use the readiness checklist; aim for ~80% before marking Ready.
+4. **Balance the funnel** — the dashboard warns when you’re all TOFU fluff or all hard-sell BOFU.
+5. **Schedule to your cadence**, not your ambition.
+6. **Log results 7–14 days after publish** — Cadence ranks what worked against your goal so you know what to double down on.
 
 ## Project structure
 
 ```
-main.js              Electron main process (creates the app window)
-preload.js            Secure bridge between Electron and the UI (reserved for future native features)
+main.js                 Electron main process
+preload.js              Secure bridge (reserved for future native features)
 src/
-  index.html           App shell
-  styles.css           Design system (obsidian theme, gradients, glass, animations)
-  app.js               App controller / view router
-  storage.js           Data layer (currently localStorage — swap this file for a real DB/auth API later)
-  catalog.js           Built-in subscription product catalog + search
-  gradients.js         Auto-assigned, persisted gradient color system
-  billing.js           Renewal date math + countdown urgency
-  stats.js             Dashboard aggregation (totals, category breakdown, upcoming renewals)
+  index.html            App shell
+  styles.css            Design system
+  app.js                Router / app controller
+  storage.js            localStorage data layer
+  frameworks.js         Goals, funnel mix, checklist, pillar packs
+  stats.js              Dashboard + calendar helpers
   components/
-    dashboard.js        Dashboard view
-    table.js             All Expenses view
-    subscriptions.js    Subscriptions view
-    settings.js          Settings view (custom categories, dashboard layout, theme mood)
-    modal.js             "+ Add Expense" flow (search, plan picker, form)
-    ring.js               Countdown ring SVG
+    onboarding.js       Guided setup for real results
+    dashboard.js        Command center
+    strategy.js         Goal, audience, pillars, cadence
+    ideas.js            Idea bank → promote to brief
+    briefs.js           Detailed briefs + readiness score
+    calendar.js         Month calendar (double-click to schedule)
+    pipeline.js         Kanban status board
+    results.js          Performance logging + rankings
+    settings.js         Export / import / reset
+    modal.js            Shared modal helpers
 ```
 
-## Run it in development
+## Run it
 
-You need [Node.js](https://nodejs.org) installed (v18+).
+You need [Node.js](https://nodejs.org) (v18+).
 
 ```bash
-cd ledger
 npm install
-npm start
+npm start          # Electron desktop window
 ```
 
-This opens the app in a native window via Electron.
-
-## Package it as a real installable desktop app
+Or in the browser:
 
 ```bash
-npm run dist:mac      # produces a .dmg / .app in /release
-npm run dist:win      # produces a .exe installer in /release
-npm run dist:linux    # produces an AppImage in /release
+npm run serve      # http://localhost:5173
 ```
 
-(`npm run dist` auto-detects your current OS.) The first run of `electron-builder`
-downloads some platform tooling — make sure you're online.
+## Package as an installable app
 
-## Notes on the data layer
+```bash
+npm run dist:mac
+npm run dist:win
+npm run dist:linux
+```
 
-Everything currently persists to `localStorage` via `src/storage.js`. That file
-is intentionally the *only* place that touches storage directly — the rest of
-the UI just calls `Storage.getExpenses()`, `Storage.addExpense()`, etc. When
-you're ready to add real accounts, replace the internals of `storage.js` with
-API calls (keeping the same function names) and nothing else in the app needs
-to change.
+Outputs land in `/release`. Add icons under `assets/` (`icon.icns`, `icon.ico`, `icon.png`) before shipping a branded build.
 
-## Editing the subscription catalog
+## Data
 
-`src/catalog.js` has the built-in product list. Prices are best-effort and
-meant to be corrected — either edit the file directly, or use the app itself:
-when you pick a plan and change its price in the Add Expense form, that
-correction is saved automatically (`Storage.setCatalogOverride`) and will be
-remembered next time.
+Everything persists to `localStorage` via `src/storage.js`. Export a JSON backup from **Settings** if the data matters. Swap `storage.js` later for a real API without rewriting the UI.
