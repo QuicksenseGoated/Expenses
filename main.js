@@ -5,11 +5,11 @@ let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    width: 1480,
+    height: 920,
     minWidth: 1100,
-    minHeight: 700,
-    backgroundColor: '#0a0a0f',
+    minHeight: 720,
+    backgroundColor: '#0b1210',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -19,13 +19,9 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
-
-  // Uncomment for debugging:
-  // mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
-  // Minimal native menu (keeps things clean, no default Electron demo menu)
   const template = [
     ...(process.platform === 'darwin' ? [{
       label: app.getName(),

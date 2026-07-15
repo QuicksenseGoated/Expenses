@@ -1,14 +1,15 @@
 {
-  "name": "ledger",
-  "productName": "Ledger",
+  "name": "cadence",
+  "productName": "Cadence",
   "version": "1.0.0",
-  "description": "A personal expense and subscription tracker with smart product search and billing countdowns.",
+  "description": "A results-driven content planner — strategy, briefs, calendar, pipeline, and performance tracking.",
   "main": "main.js",
-  "author": "NoDroneZone",
+  "author": "Quicksense",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "start": "electron .",
+    "serve": "npx --yes serve src -l 5173",
     "dist": "electron-builder",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
@@ -19,8 +20,8 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.nodronezone.ledger",
-    "productName": "Ledger",
+    "appId": "com.quicksense.cadence",
+    "productName": "Cadence",
     "directories": {
       "output": "release"
     },
@@ -31,7 +32,7 @@
       "assets/**/*"
     ],
     "mac": {
-      "category": "public.app-category.finance",
+      "category": "public.app-category.productivity",
       "icon": "assets/icon.icns"
     },
     "win": {
