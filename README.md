@@ -1,16 +1,18 @@
-# Quicksense Ops
+# Ledger
 
-Creator **business OS** for Quicksense (`QuicksenseGoated`).
+Mobile subscription expense app (frontend preview).
 
 **Live:** https://quicksensegoated.github.io/Expenses/
 
-This is not a caption / clip-idea app. Streamladder owns short-form. You run live formats, hit quotas, grade the week, and track ACV + TikTok views like a business.
+## What’s on screen
+| Tab | Purpose |
+|-----|---------|
+| **Home** | Month spend, alerts, upcoming bills |
+| **Subs** | All subscriptions + keep / watch / cancel |
+| **Insights** | Cancel advice + what to do with freed cash |
+| **More** | Product research cards (static) |
 
-| Tab | Job |
-|-----|-----|
-| **Week** | Production calendar — format per day, live / Ladder / raid checkboxes |
-| **Train** | 1–5 scorecard on 5 ops axes · auto drill on weakest |
-| **Strategy** | One-pager: positioning, funnel, pillars, quotas, format catalog, raid list |
-| **Score** | ACV / TT week / followers snapshots + keep·kill·test decisions |
+Tap any subscription for billing dates, research blurb, and action advice.
 
-Data stays in device `localStorage`. Install from the browser as a PWA on phone.
+## Status
+UI only — mock data in `data.js`. No accounts, payments, or reminders yet.

@@ -1,47 +1,57 @@
-import { DB } from './storage.js';
-import { BIZ } from './strategy.js';
-import { renderWeek } from './components/week.js';
-import { renderTrain } from './components/train.js';
-import { renderStrategy } from './components/strategyView.js';
-import { renderScore } from './components/score.js';
+import { APP } from './data.js';
+import { renderHome } from './components/home.js';
+import { renderSubs } from './components/subs.js';
+import { renderInsights } from './components/insights.js';
+import { renderMore } from './components/more.js';
+import { renderDetail } from './components/detail.js';
 
 const TABS = [
-  { id: 'week', label: 'Week' },
-  { id: 'train', label: 'Train' },
-  { id: 'strategy', label: 'Strategy' },
-  { id: 'score', label: 'Score' }
+  { id: 'home', label: 'Home' },
+  { id: 'subs', label: 'Subs' },
+  { id: 'insights', label: 'Insights' },
+  { id: 'more', label: 'More' }
 ];
 
 const root = document.getElementById('app');
-let route = localStorage.getItem('qs.route') || 'week';
-if (!TABS.some((t) => t.id === route)) route = 'week';
+let route = 'home';
+let detailId = null;
+let stack = [];
 
 const ctx = {
   navigate(id) {
     route = id;
-    localStorage.setItem('qs.route', id);
+    detailId = null;
+    stack = [];
     paint();
-    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+    window.scrollTo(0, 0);
   },
-  refresh() {
+  openSub(id) {
+    stack.push(route);
+    detailId = id;
     paint();
+    window.scrollTo(0, 0);
+  },
+  back() {
+    detailId = null;
+    route = stack.pop() || 'subs';
+    paint();
+    window.scrollTo(0, 0);
   }
 };
 
 function boot() {
-  DB.boot();
   shell();
   paint();
 }
 
 function shell() {
   root.innerHTML = `
-    <div class="app">
+    <div class="phone">
       <main id="main" class="main"></main>
       <nav class="tabbar" aria-label="Primary">
         ${TABS.map((t) => `
           <button type="button" class="tab" data-nav="${t.id}">
-            <span class="tab-dot" aria-hidden="true"></span>
+            <span class="tab-ico" aria-hidden="true"></span>
             <span>${t.label}</span>
           </button>
         `).join('')}
@@ -55,22 +65,35 @@ function shell() {
 
 function paint() {
   if (!document.getElementById('main')) shell();
+
+  const onDetail = !!detailId;
   root.querySelectorAll('[data-nav]').forEach((b) => {
-    b.classList.toggle('active', b.dataset.nav === route);
+    b.classList.toggle('active', !onDetail && b.dataset.nav === route);
   });
-  document.title = `${TABS.find((t) => t.id === route)?.label || 'Ops'} · ${BIZ.name}`;
+  root.querySelector('.tabbar')?.classList.toggle('hidden', onDetail);
+
+  document.title = onDetail
+    ? `Subscription · ${APP.name}`
+    : `${TABS.find((t) => t.id === route)?.label || APP.name} · ${APP.name}`;
+
   const main = document.getElementById('main');
   main.innerHTML = '';
   const view = document.createElement('div');
   view.className = 'view';
   main.appendChild(view);
+
+  if (onDetail) {
+    renderDetail(view, ctx, detailId);
+    return;
+  }
+
   const map = {
-    week: renderWeek,
-    train: renderTrain,
-    strategy: renderStrategy,
-    score: renderScore
+    home: renderHome,
+    subs: renderSubs,
+    insights: renderInsights,
+    more: renderMore
   };
-  (map[route] || renderWeek)(view, ctx);
+  (map[route] || renderHome)(view, ctx);
 }
 
 boot();

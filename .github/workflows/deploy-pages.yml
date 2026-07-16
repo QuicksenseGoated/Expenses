@@ -1,4 +1,4 @@
-name: Deploy Quicksense Ops PWA
+name: Deploy Ledger PWA
 
 on:
   push:
@@ -28,8 +28,8 @@ jobs:
       - name: Prepare public site
         run: |
           mkdir -p public
-          cp index.html styles.css app.js storage.js strategy.js sw.js manifest.webmanifest .nojekyll public/
-          cp -r components icons assets public/
+          cp index.html styles.css app.js data.js sw.js manifest.webmanifest .nojekyll public/
+          cp -r components icons public/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

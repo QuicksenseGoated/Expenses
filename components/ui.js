@@ -6,20 +6,6 @@ export function $all(sel, root = document) {
   return [...root.querySelectorAll(sel)];
 }
 
-export function toast(msg) {
-  let el = document.getElementById('toast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'toast';
-    el.className = 'toast';
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove('show'), 1600);
-}
-
 export function esc(s = '') {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -28,43 +14,25 @@ export function esc(s = '') {
     .replace(/"/g, '&quot;');
 }
 
-/** Shared brand header with Twitch profile logo */
-export function brandHead(sub) {
-  return `
-    <header class="brand-head">
-      <img class="brand-logo" src="./icons/logo.png" width="48" height="48" alt="Quicksense" />
-      <div class="brand-text">
-        <p class="brand">Quicksense</p>
-        <p class="brand-sub">${esc(sub)}</p>
-      </div>
-    </header>
-  `;
+export function money(n, currency = '€') {
+  return `${currency}${Number(n).toFixed(2)}`;
 }
 
-export function modal({ title, body, onOk, okLabel = 'Save' }) {
-  const overlay = document.createElement('div');
-  overlay.className = 'sheet-overlay';
-  overlay.innerHTML = `
-    <div class="sheet" role="dialog">
-      <header><h2>${esc(title)}</h2><button type="button" class="icon" data-x aria-label="Close">✕</button></header>
-      <div class="sheet-body">${body}</div>
-      <footer>
-        <button type="button" class="btn" data-x>Cancel</button>
-        <button type="button" class="btn primary" data-ok>${esc(okLabel)}</button>
-      </footer>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  requestAnimationFrame(() => overlay.classList.add('open'));
-  const close = () => {
-    overlay.classList.remove('open');
-    setTimeout(() => overlay.remove(), 180);
-  };
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  $all('[data-x]', overlay).forEach((b) => b.addEventListener('click', close));
-  $('[data-ok]', overlay)?.addEventListener('click', () => {
-    const ok = onOk?.(overlay);
-    if (ok !== false) close();
-  });
-  return overlay;
+export function niceDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+export function daysUntil(iso) {
+  const t = new Date(`${iso}T12:00:00`);
+  const now = new Date();
+  now.setHours(12, 0, 0, 0);
+  return Math.round((t - now) / 86400000);
+}
+
+export function actionTone(action) {
+  if (action === 'cancel') return 'danger';
+  if (action === 'watch') return 'warn';
+  return 'ok';
 }

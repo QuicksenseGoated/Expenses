@@ -1,55 +1,17 @@
 {
-  "name": "quicksense-ops",
-  "productName": "Quicksense Ops",
-  "version": "3.0.0",
-  "description": "Quicksense creator business OS — week plan, trainer, strategy, KPIs.",
+  "name": "ledger",
+  "productName": "Ledger",
+  "version": "0.1.0",
+  "description": "Mobile subscription expense app — track bills, research, cancel advice.",
   "main": "main.js",
   "author": "Quicksense",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "serve": "npx --yes serve . -l 5173",
-    "dist": "electron-builder",
-    "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux"
+    "serve": "npx --yes serve . -l 5173"
   },
   "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
-  },
-  "build": {
-    "appId": "com.quicksense.sensedesk",
-    "productName": "Sense Desk",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "main.js",
-      "preload.js",
-      "index.html",
-      "styles.css",
-      "app.js",
-      "storage.js",
-      "strategy.js",
-      "sw.js",
-      "manifest.webmanifest",
-      "components/**/*",
-      "icons/**/*",
-      "assets/**/*"
-    ],
-    "mac": {
-      "category": "public.app-category.productivity",
-      "icon": "assets/icon.icns"
-    },
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
-    }
+    "electron": "^31.0.0"
   }
 }

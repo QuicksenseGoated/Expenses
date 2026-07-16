@@ -1,7 +1,7 @@
 {
-  "name": "Quicksense Ops",
-  "short_name": "Quicksense",
-  "description": "Week plan, trainer, strategy, KPIs — for Quicksense.",
+  "name": "Ledger",
+  "short_name": "Ledger",
+  "description": "Track subscriptions, billing dates, cancel advice, and money plans.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

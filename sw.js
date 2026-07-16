@@ -1,22 +1,21 @@
-const CACHE = 'qs-ops-v1.2';
+const CACHE = 'ledger-ui-v1';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
-  './storage.js',
-  './strategy.js',
+  './data.js',
   './sw.js',
   './manifest.webmanifest',
-  './icons/logo.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './components/ui.js',
-  './components/week.js',
-  './components/train.js',
-  './components/strategyView.js',
-  './components/score.js'
+  './components/home.js',
+  './components/subs.js',
+  './components/insights.js',
+  './components/more.js',
+  './components/detail.js'
 ];
 
 self.addEventListener('install', (e) => {
