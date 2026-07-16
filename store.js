@@ -37,6 +37,7 @@ const empty = () => ({
     hideBalance: false,
     theme: 'light',
     onboarded: false,
+    notifications: false,
     homeWidgets: [...DEFAULT_WIDGETS],
   },
 });
@@ -181,6 +182,23 @@ export const Store = {
       (tx.type === 'spend' ? s.balance + tx.amount : s.balance - tx.amount).toFixed(2)
     );
     s.transactions = s.transactions.filter((t) => t.id !== id);
+    return write(s);
+  },
+
+  updateTx(id, patch) {
+    const s = read();
+    const i = s.transactions.findIndex((t) => t.id === id);
+    if (i < 0) return s;
+    const prev = s.transactions[i];
+    const next = { ...prev, ...patch };
+    if (s.balance != null && patch.amount != null && Number(patch.amount) !== prev.amount) {
+      const oldEffect = prev.type === 'spend' ? -prev.amount : prev.amount;
+      const newAmt = Math.abs(Number(patch.amount));
+      const newEffect = prev.type === 'spend' ? -newAmt : newAmt;
+      s.balance = Number((s.balance - oldEffect + newEffect).toFixed(2));
+      next.amount = newAmt;
+    }
+    s.transactions[i] = next;
     return write(s);
   },
 
@@ -367,5 +385,77 @@ export const Store = {
         .reduce((sum, t) => sum + t.amount, 0);
       return { ...b, used, pct: Math.min(100, Math.round((used / b.limit) * 100)) };
     });
-  }
+  },
+
+  /** Next 7 days with projected charges per day. */
+  weekStrip() {
+    const s = read();
+    const payday = s.settings?.paydayDay;
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const days = [];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      const iso = d.toISOString().slice(0, 10);
+      const dayNum = d.getDate();
+      days.push({
+        iso,
+        dayNum,
+        weekday: d.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 2),
+        isToday: i === 0,
+        isPayday: payday != null && dayNum === Number(payday),
+        items: [],
+        total: 0,
+      });
+    }
+
+    const byIso = new Map(days.map((d) => [d.iso, d]));
+    for (const sub of s.subscriptions) {
+      for (const hit of chargesWithinDays(sub, 7, today)) {
+        const bucket = byIso.get(hit.date);
+        if (!bucket) continue;
+        bucket.items.push({ ...sub, price: hit.amount });
+        bucket.total += hit.amount;
+      }
+    }
+    return days;
+  },
+
+  /** 30-day balance projection using known bills + average daily spend. */
+  balanceForecast(days = 30) {
+    const s = read();
+    if (s.balance == null) return null;
+
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const dailySpend = (this.monthSpend() + this.subsMonthly()) / 30;
+
+    const chargesByDate = new Map();
+    for (const sub of s.subscriptions) {
+      for (const hit of chargesWithinDays(sub, days, today)) {
+        chargesByDate.set(hit.date, (chargesByDate.get(hit.date) || 0) + hit.amount);
+      }
+    }
+
+    let balance = s.balance;
+    const points = [];
+    for (let i = 0; i <= days; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      const iso = d.toISOString().slice(0, 10);
+      if (i > 0) balance -= dailySpend;
+      balance -= chargesByDate.get(iso) || 0;
+      points.push({ iso, balance: Number(balance.toFixed(2)) });
+    }
+
+    const lows = points.map((p) => p.balance);
+    return {
+      points,
+      lowest: Math.min(...lows),
+      end: points[points.length - 1]?.balance,
+      dailySpend,
+    };
+  },
 };

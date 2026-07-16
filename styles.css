@@ -1210,6 +1210,250 @@ a { color: var(--royal); }
   text-align: right;
 }
 
+.cal-charge {
+  gap: 8px;
+}
+
+.cal-charge .brand-badge {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+}
+
+/* Week strip */
+.week-strip-panel {
+  margin-bottom: 14px;
+}
+
+.week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.week-day {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 10px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--elevated);
+  text-align: center;
+}
+
+.week-day.today {
+  border-color: var(--royal);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--royal);
+}
+
+.week-day.payday .week-num { color: var(--gold); }
+
+.week-wd {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.week-num {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.week-amt {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--royal);
+}
+
+.week-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.week-day.has-charges .week-dot { display: none; }
+
+/* Calendar grid */
+.cal-view-toggle {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.seg {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--elevated);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.seg.on {
+  border-color: var(--royal);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--royal);
+}
+
+.cal-grid-wrap { padding: 4px 0; }
+
+.cal-grid-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.cal-grid-head span {
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--elevated);
+  font-size: 0.82rem;
+  position: relative;
+}
+
+.cal-cell.empty { background: transparent; pointer-events: none; }
+
+.cal-cell b {
+  font-family: var(--serif);
+  font-weight: 600;
+}
+
+.cal-cell.today {
+  border-color: var(--royal);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--royal);
+}
+
+.cal-cell.payday b { color: var(--gold); }
+.cal-cell.past { opacity: 0.5; }
+
+.cal-cell.has-bills {
+  border-color: var(--line-strong);
+}
+
+.payday-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  font-style: normal;
+}
+
+.cal-cell-dots {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+}
+
+.cal-cell-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--royal);
+}
+
+/* Forecast chart */
+.forecast-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 64px;
+  margin: 12px 0 8px;
+  padding: 0 2px;
+}
+
+.forecast-chart i {
+  flex: 1;
+  min-width: 3px;
+  border-radius: 2px 2px 0 0;
+  background: var(--royal);
+  opacity: 0.85;
+}
+
+.forecast-chart i.neg { background: var(--danger); }
+
+/* Bill chip with logo */
+.bill-chip-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bill-chip .brand-badge {
+  width: 32px;
+  height: 32px;
+  font-size: 0.75rem;
+}
+
+.bill-chip strong { margin-top: 8px; }
+
+/* Budget envelope button */
+button.envelope {
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Activity feed actions */
+.feed-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Profile toggle */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--elevated);
+  cursor: pointer;
+}
+
+.toggle-row strong { display: block; font-size: 0.9rem; }
+.toggle-row span { font-size: 0.78rem; color: var(--muted); }
+.toggle-row input { width: 18px; height: 18px; flex-shrink: 0; }
+
 .alert-panel {
   border-color: #fde68a;
   background: var(--warn-soft);

@@ -1,5 +1,5 @@
 import { Store } from '../store.js';
-import { money, niceDate, esc, toast } from './ui.js';
+import { money, niceDate, esc, toast, sheet, $ } from './ui.js';
 import { openSpendSheet } from './home.js';
 
 export function renderActivity(root, ctx) {
@@ -54,7 +54,10 @@ export function renderActivity(root, ctx) {
               </div>
               <div class="feed-end">
                 <b class="${t.type === 'spend' ? 'out' : 'in'}">${t.type === 'spend' ? '−' : '+'}${money(t.amount, s.currency)}</b>
-                <button type="button" class="link-btn" data-del="${t.id}">Undo</button>
+                <div class="feed-actions">
+                  <button type="button" class="link-btn" data-edit="${t.id}">Edit</button>
+                  <button type="button" class="link-btn" data-del="${t.id}">Undo</button>
+                </div>
               </div>
             </div>
           `).join('')}
@@ -74,6 +77,10 @@ export function renderActivity(root, ctx) {
   root.querySelector('[data-spend-empty]')?.addEventListener('click', () => openSpendSheet(ctx));
   root.querySelector('[data-income]')?.addEventListener('click', () => ctx.openIncome());
 
+  root.querySelectorAll('[data-edit]').forEach((b) => {
+    b.addEventListener('click', () => openEditSheet(ctx, b.dataset.edit));
+  });
+
   root.querySelectorAll('[data-del]').forEach((b) => {
     b.addEventListener('click', () => {
       Store.deleteTx(b.dataset.del);
@@ -81,6 +88,49 @@ export function renderActivity(root, ctx) {
       ctx.refresh();
     });
   });
+}
+
+async function openEditSheet(ctx, id) {
+  const s = Store.get();
+  const tx = s.transactions.find((t) => t.id === id);
+  if (!tx) return;
+
+  const categories = ['Essentials', 'Food', 'Lifestyle', 'Transport', 'Shopping', 'Savings', 'General', 'Income'];
+  const cats = tx.type === 'income'
+    ? '<option selected>Income</option>'
+    : categories.filter((c) => c !== 'Income').map((c) =>
+      `<option ${tx.category === c ? 'selected' : ''}>${c}</option>`
+    ).join('');
+
+  const result = await sheet({
+    title: 'Edit transaction',
+    body: `
+      <label class="field"><span>Amount</span>
+        <input id="e-amt" type="number" min="0.01" step="0.01" inputmode="decimal" value="${tx.amount}" required />
+      </label>
+      <label class="field"><span>Note</span>
+        <input id="e-note" maxlength="80" value="${esc(tx.note)}" required />
+      </label>
+      ${tx.type === 'spend' ? `
+        <label class="field"><span>Category</span>
+          <select id="e-cat">${cats}</select>
+        </label>
+      ` : ''}
+    `,
+    actions: [{ id: 'save', label: 'Save changes', primary: true }],
+  });
+  if (result?.action !== 'save') return;
+
+  const patch = {
+    amount: $('#e-amt', result.overlay)?.value,
+    note: $('#e-note', result.overlay)?.value || tx.note,
+  };
+  if (tx.type === 'spend') {
+    patch.category = $('#e-cat', result.overlay)?.value || tx.category;
+  }
+  Store.updateTx(id, patch);
+  toast('Updated');
+  ctx.refresh();
 }
 
 function groupByDate(txs) {

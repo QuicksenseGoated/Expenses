@@ -2,8 +2,9 @@ import { Store } from '../store.js';
 import { esc, toast, confirmSheet, applyTheme, money } from './ui.js';
 import { openCustomizeSheet } from './home.js';
 import { PRODUCT_COUNT } from '../catalog.js';
+import { enableNotifications, notificationsSupported, checkReminders } from './notifications.js';
 
-const APP_VERSION = '11';
+const APP_VERSION = '15';
 
 export function renderProfile(root, ctx) {
   const s = Store.get();
@@ -52,6 +53,20 @@ export function renderProfile(root, ctx) {
     </section>
 
     <section class="panel">
+      <h2>Reminders</h2>
+      <p class="panel-sub">Get notified when bills are due tomorrow or cancel windows are closing.</p>
+      ${notificationsSupported() ? `
+        <label class="toggle-row">
+          <div>
+            <strong>Bill reminders</strong>
+            <span>${settings.notifications && Notification.permission === 'granted' ? 'On' : 'Off'}</span>
+          </div>
+          <input type="checkbox" id="notif-toggle" ${settings.notifications && Notification.permission === 'granted' ? 'checked' : ''} />
+        </label>
+      ` : `<p class="panel-sub">Notifications not supported in this browser.</p>`}
+    </section>
+
+    <section class="panel">
       <h2>Backup</h2>
       <p class="panel-sub">Export everything on this device, or restore from a file.</p>
       <div class="link-row">
@@ -80,6 +95,24 @@ export function renderProfile(root, ctx) {
   root.querySelector('[data-customize]')?.addEventListener('click', async () => {
     ctx.navigate('home');
     await openCustomizeSheet(ctx);
+  });
+
+  root.querySelector('#notif-toggle')?.addEventListener('change', async (e) => {
+    if (e.target.checked) {
+      const ok = await enableNotifications();
+      if (!ok) {
+        e.target.checked = false;
+        toast('Permission denied');
+        Store.updateSettings({ notifications: false });
+        return;
+      }
+      toast('Reminders enabled');
+      checkReminders();
+    } else {
+      Store.updateSettings({ notifications: false });
+      toast('Reminders off');
+    }
+    ctx.refresh();
   });
 
   root.querySelector('[data-export]')?.addEventListener('click', () => {

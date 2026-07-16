@@ -1,4 +1,6 @@
 import { Store } from '../store.js';
+import { getSubBranding } from '../catalog.js';
+import { brandBadgeHtml, wireBrandBadges } from './brand.js';
 import { greeting, money, niceDate, esc, toast, sheet, $, applyTheme } from './ui.js';
 import { TAB_ICONS } from './tab-icons.js';
 
@@ -6,6 +8,7 @@ const SECTIONS = [
   { id: 'paycheck', label: 'Paycheck radar', desc: 'Bills before payday' },
   { id: 'subs_audit', label: 'Sub load', desc: 'Cost vs balance' },
   { id: 'budgets', label: 'Budgets', desc: 'Monthly category limits' },
+  { id: 'forecast', label: 'Balance forecast', desc: '30-day projection' },
 ];
 
 const WIDGET_META = {
@@ -15,6 +18,7 @@ const WIDGET_META = {
   recent: { render: renderRecent },
   subs_audit: { render: renderSubsAudit },
   budgets: { render: renderBudgets },
+  forecast: { render: renderForecast },
 };
 
 const CORE = ['metrics', 'bills', 'recent'];
@@ -80,6 +84,8 @@ export function renderHome(root, ctx) {
     const slot = root.querySelector(`[data-wid="${id}"]`);
     if (slot) WIDGET_META[id].render(slot, ctx, s);
   });
+
+  wireBrandBadges(root);
 
   root.querySelector('[data-customize]')?.addEventListener('click', () => openCustomizeSheet(ctx));
   root.querySelector('[data-profile]')?.addEventListener('click', () => ctx.navigate('profile'));
@@ -196,13 +202,18 @@ function renderBills(slot, ctx, s) {
       </div>
       ${upcoming.length ? `
         <div class="bill-strip">
-          ${upcoming.map((b) => `
+          ${upcoming.map((b) => {
+            const brand = getSubBranding(b);
+            return `
             <button type="button" class="bill-chip" data-sub="${b.id}">
-              <span class="bill-day">${b.daysUntil}d</span>
+              <div class="bill-chip-top">
+                ${brandBadgeHtml(brand)}
+                <span class="bill-day">${b.daysUntil}d</span>
+              </div>
               <strong>${esc(b.name)}</strong>
               <span>${money(b.price, b.currency)}</span>
-            </button>
-          `).join('')}
+            </button>`;
+          }).join('')}
         </div>
       ` : `<p class="empty-sm">No bills yet. <button type="button" class="link-btn" data-go="bills">Add one</button></p>`}
     </section>`;
@@ -254,20 +265,83 @@ function renderBudgets(slot, ctx, s) {
     <section class="panel">
       <div class="panel-head">
         <h2>Budgets</h2>
-        <span class="pill">This month</span>
+        <span class="pill">Tap to edit</span>
       </div>
       <div class="envelope-list">
         ${rows.map((b) => `
-          <div class="envelope">
+          <button type="button" class="envelope" data-budget="${b.id}">
             <div class="env-head">
               <span>${esc(b.name)}</span>
               <span>${money(b.used, s.currency)} / ${money(b.limit, s.currency)}</span>
             </div>
             <div class="env-bar"><i style="width:${b.pct}%;background:${esc(b.color)}"></i></div>
-          </div>
+          </button>
         `).join('')}
       </div>
     </section>`;
+  slot.querySelectorAll('[data-budget]').forEach((btn) => {
+    btn.addEventListener('click', () => openBudgetSheet(ctx, btn.dataset.budget));
+  });
+}
+
+function renderForecast(slot, ctx, s) {
+  const fc = Store.balanceForecast(30);
+  if (!fc || s.balance == null) {
+    slot.innerHTML = `
+      <section class="panel insight">
+        <h2>Balance forecast</h2>
+        <p class="insight-body">Set your balance to see a 30-day projection.</p>
+      </section>`;
+    return;
+  }
+
+  const min = Math.min(...fc.points.map((p) => p.balance), s.balance);
+  const max = Math.max(...fc.points.map((p) => p.balance), s.balance);
+  const range = max - min || 1;
+  const warn = fc.lowest < 0;
+
+  slot.innerHTML = `
+    <section class="panel insight ${warn ? 'warn' : ''}">
+      <div class="panel-head">
+        <h2>30-day forecast</h2>
+        <span class="pill">${money(fc.end, s.currency)}</span>
+      </div>
+      <div class="forecast-chart" role="img" aria-label="Balance projection over 30 days">
+        ${fc.points.filter((_, i) => i % 3 === 0 || i === fc.points.length - 1).map((p) => {
+          const h = Math.max(4, Math.round(((p.balance - min) / range) * 100));
+          const neg = p.balance < 0;
+          return `<i class="${neg ? 'neg' : ''}" style="height:${h}%"></i>`;
+        }).join('')}
+      </div>
+      <p class="insight-body">
+        Lowest ${money(fc.lowest, s.currency)} · ~${money(fc.dailySpend, s.currency)}/day burn
+        ${warn ? ' · may go negative' : ''}
+      </p>
+    </section>`;
+}
+
+async function openBudgetSheet(ctx, id) {
+  const s = Store.get();
+  const budget = s.budgets.find((b) => b.id === id);
+  if (!budget) return;
+
+  const result = await sheet({
+    title: `${budget.name} budget`,
+    body: `
+      <label class="field">
+        <span>Monthly limit (${s.currency})</span>
+        <input id="b-limit" type="number" min="1" step="1" inputmode="decimal" value="${budget.limit}" required />
+      </label>
+      <p class="sheet-hint">Spending in "${budget.name}" category counts toward this limit.</p>
+    `,
+    actions: [{ id: 'save', label: 'Save', primary: true }],
+  });
+  if (result?.action !== 'save') return;
+  const limit = Number($('#b-limit', result.overlay)?.value);
+  if (!Number.isFinite(limit) || limit < 1) return toast('Invalid limit');
+  Store.updateBudget(id, { limit });
+  toast('Budget updated');
+  ctx.refresh();
 }
 
 async function openBalanceSheet(ctx, current = '') {
