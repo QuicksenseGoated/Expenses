@@ -21,10 +21,10 @@ export const BIZ = {
 };
 
 export const POSITIONING = {
-  who: 'Siege players + clip consumers who want personality, not coach-core.',
-  what: 'Chaotic-funny ranked & event streams people return to.',
-  whyUs: 'Named formats (KOTH, locks, chat rules) + consistent schedule.',
-  not: 'Facecam, IRL, dance trends, random silent ranked.'
+  who: 'Siege players and clip scrollers who want a personality, not a coach.',
+  what: 'Chaotic-funny ranked and event nights people actually come back for.',
+  whyUs: 'Named formats (KOTH, locks, chat jobs) and you show up on a schedule.',
+  not: 'Facecam, IRL, dance trends, silent ranked grind.'
 };
 
 /** Funnel as a business system */
@@ -186,33 +186,33 @@ export function defaultWeekPlan() {
 export const TRAIN_AXES = [
   {
     id: 'schedule',
-    name: 'Schedule hit rate',
-    ask: 'Did you hit planned streams this week?',
-    drill: 'Lock start times in calendar. Miss = same makeup slot within 48h.'
+    name: 'Showing up',
+    ask: 'Did you actually hit the streams you planned?',
+    drill: 'Put start times in your phone calendar. Miss one → same slot within 48h.'
   },
   {
     id: 'format',
-    name: 'Named format clarity',
-    ask: 'Was the format obvious in title + first 2 minutes?',
-    drill: 'Read rules out loud at start. Put format name first in title.'
+    name: 'Format clarity',
+    ask: 'Could a lurker tell the format from the title + first 2 minutes?',
+    drill: 'Say the rules out loud at the start. Format name goes first in the title.'
   },
   {
     id: 'chat',
-    name: 'Chat employment',
-    ask: 'Did chat have a job (vote, queue, predict)?',
-    drill: 'One chat verb per stream. Repeat it every round.'
+    name: 'Chat has a job',
+    ask: 'Did chat vote, queue, predict — anything?',
+    drill: 'One clear chat job per stream. Say it every round so it sticks.'
   },
   {
     id: 'convert',
-    name: 'Clip → live convert',
-    ask: 'Did Ladder posts go out same day with Twitch CTA?',
-    drill: 'Stream end → Ladder approve in 30 min. Non-negotiable SOP.'
+    name: 'Clips → live',
+    ask: 'Did Ladder posts go out same day with a Twitch CTA?',
+    drill: 'Stream ends → approve Ladder within 30 minutes. No “I’ll do it later.”'
   },
   {
     id: 'network',
-    name: 'Network (raids)',
-    ask: 'Raid every stream to similar size?',
-    drill: 'Keep 5 raid targets. Raid before you close.'
+    name: 'Raids',
+    ask: 'Did you raid every stream to someone similar size?',
+    drill: 'Keep ~5 raid targets saved. Raid before you hit End Stream.'
   }
 ];
 
