@@ -13,10 +13,13 @@ import {
 } from '../catalog.js';
 import { esc, money, niceDate, daysUntil, toast, initials, addDaysISO, $ } from './ui.js';
 
+const BROWSE_KEY = 'financer.browse.full';
+
 export function renderBills(root, ctx) {
   const s = Store.get();
   const mine = s.subscriptions;
   const total = Store.subsMonthly();
+  const browseFull = localStorage.getItem(BROWSE_KEY) !== '0';
 
   root.innerHTML = `
     <header class="page-title">
@@ -34,42 +37,49 @@ export function renderBills(root, ctx) {
       <section class="hero-empty compact">
         <div class="hero-empty-icon">◎</div>
         <h2>Nothing tracked yet</h2>
-        <p>Slide up the library — pick a product, then choose your plan.</p>
+        <p>Search below or browse the library — pick a product, then your plan.</p>
       </section>
     `}
 
-    <section class="search-drawer" id="drawer" data-open="false">
-      <button type="button" class="drawer-handle" id="drawer-handle" aria-expanded="false">
-        <span class="drawer-pill" aria-hidden="true"></span>
-        <span class="drawer-label">Slide up · subscription library</span>
-        <span class="drawer-count">${PRODUCT_COUNT}</span>
-      </button>
-      <div class="drawer-body" id="drawer-body">
-        <label class="search">
+    <section class="browse-panel" id="browse" data-full="${browseFull ? 'true' : 'false'}">
+      <div class="browse-toolbar">
+        <label class="search browse-search">
           <span aria-hidden="true">⌕</span>
           <input id="q" type="search" placeholder="Streamladder, Claude, Netflix…" autocomplete="off" enterkeyhint="search" />
         </label>
+        <div class="browse-slider" role="group" aria-label="Library view">
+          <span class="browse-slider-label ${browseFull ? '' : 'on'}">Search</span>
+          <label class="browse-switch" title="Toggle full library browse">
+            <input type="checkbox" id="browse-toggle" ${browseFull ? 'checked' : ''} />
+            <span class="browse-switch-track"><i></i></span>
+          </label>
+          <span class="browse-slider-label ${browseFull ? 'on' : ''}">Browse</span>
+        </div>
+      </div>
+
+      <div class="browse-extra" id="browse-extra">
         <div class="chip-scroll" id="cats">
           <button type="button" class="chip on" data-cat="all">All</button>
           ${CATEGORIES.map((c) => `<button type="button" class="chip" data-cat="${esc(c.id)}">${c.icon} ${esc(c.label)}</button>`).join('')}
         </div>
-        <p class="search-hint" id="hint">Swipe the row below — ${PRODUCT_COUNT} products, ${CATALOG_SIZE}+ plans inside.</p>
+        <p class="search-hint" id="hint">${PRODUCT_COUNT} products · swipe the row</p>
         <div class="product-rail-wrap">
           <div class="product-rail" id="rail"></div>
         </div>
-        <div class="discover-list" id="results"></div>
       </div>
+
+      <div class="discover-list" id="results"></div>
     </section>
   `;
 
   let category = 'all';
-  let open = false;
-  const drawer = $('#drawer', root);
-  const handle = $('#drawer-handle', root);
+  const browse = $('#browse', root);
+  const toggle = $('#browse-toggle', root);
   const q = $('#q', root);
   const rail = $('#rail', root);
   const results = $('#results', root);
   const hint = $('#hint', root);
+  const extra = $('#browse-extra', root);
 
   const ownedForProduct = (productId) => mine.filter((m) => {
     const { productId: pid } = parseCatalogKey(m.catalogId);
@@ -83,24 +93,13 @@ export function renderBills(root, ctx) {
     return rows;
   };
 
-  const paintRail = () => {
-    const rows = filterProducts();
-    const query = q.value.trim();
-
-    if (query.length >= 2) {
-      rail.innerHTML = '';
-      rail.parentElement.style.display = 'none';
-      results.innerHTML = rows.length ? rows.map((p) => productRow(p)).join('') : `<p class="empty-sm">No match for “${esc(query)}”.</p>`;
-      hint.textContent = rows.length ? `${rows.length} product${rows.length === 1 ? '' : 's'} found` : 'Try another name.';
-      wireProductClicks(results);
-      return;
-    }
-
-    rail.parentElement.style.display = '';
-    hint.textContent = `Swipe → ${rows.length} products · tap one to pick your plan`;
-    results.innerHTML = '';
-    rail.innerHTML = rows.map((p) => productTile(p)).join('');
-    wireProductClicks(rail);
+  const setBrowseFull = (full) => {
+    browse.dataset.full = full ? 'true' : 'false';
+    localStorage.setItem(BROWSE_KEY, full ? '1' : '0');
+    browse.querySelectorAll('.browse-slider-label').forEach((el, i) => {
+      el.classList.toggle('on', full ? i === 1 : i === 0);
+    });
+    paintRail();
   };
 
   const productTile = (p) => {
@@ -135,25 +134,33 @@ export function renderBills(root, ctx) {
     });
   };
 
-  const setOpen = (next) => {
-    open = next;
-    drawer.dataset.open = open ? 'true' : 'false';
-    handle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) {
-      paintRail();
-      setTimeout(() => q.focus(), 280);
+  const paintRail = () => {
+    const rows = filterProducts();
+    const query = q.value.trim();
+    const full = browse.dataset.full === 'true';
+
+    if (query.length >= 2) {
+      results.innerHTML = rows.length
+        ? rows.map((p) => productRow(p)).join('')
+        : `<p class="empty-sm">No match for “${esc(query)}”.</p>`;
+      if (hint) hint.textContent = rows.length ? `${rows.length} result${rows.length === 1 ? '' : 's'}` : 'Try another name.';
+      wireProductClicks(results);
+      return;
     }
+
+    results.innerHTML = '';
+    if (!full) {
+      if (hint) hint.textContent = 'Type to search · flip Browse on for the full library';
+      rail.innerHTML = '';
+      return;
+    }
+
+    if (hint) hint.textContent = `Swipe → ${rows.length} of ${PRODUCT_COUNT} · ${CATALOG_SIZE}+ plans`;
+    rail.innerHTML = rows.map((p) => productTile(p)).join('');
+    wireProductClicks(rail);
   };
 
-  handle.addEventListener('click', () => setOpen(!open));
-
-  let startY = 0;
-  handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
-  handle.addEventListener('touchend', (e) => {
-    const dy = startY - e.changedTouches[0].clientY;
-    if (dy > 24) setOpen(true);
-    if (dy < -24) setOpen(false);
-  }, { passive: true });
+  toggle?.addEventListener('change', () => setBrowseFull(toggle.checked));
 
   q.addEventListener('input', paintRail);
   root.querySelectorAll('[data-cat]').forEach((btn) => {
@@ -168,6 +175,8 @@ export function renderBills(root, ctx) {
   root.querySelectorAll('[data-sub]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.openSub(btn.dataset.sub));
   });
+
+  paintRail();
 }
 
 function card(sub) {

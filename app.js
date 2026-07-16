@@ -5,13 +5,14 @@ import { renderActivity } from './components/activity.js';
 import { renderPlan } from './components/plan.js';
 import { renderProfile } from './components/profile.js';
 import { initInstallPrompt } from './components/install.js';
+import { TAB_ICONS } from './components/tab-icons.js';
 
 const TABS = [
-  { id: 'home', label: 'Home', icon: '◉' },
-  { id: 'bills', label: 'Bills', icon: '▣' },
-  { id: 'spend', label: 'Spend', icon: '+', center: true },
-  { id: 'plan', label: 'Plan', icon: '◎' },
-  { id: 'profile', label: 'You', icon: '◌' }
+  { id: 'home', label: 'Home', icon: TAB_ICONS.home },
+  { id: 'bills', label: 'Bills', icon: TAB_ICONS.bills },
+  { id: 'spend', label: 'Spend', center: true },
+  { id: 'plan', label: 'Plan', icon: TAB_ICONS.plan },
+  { id: 'profile', label: 'You', icon: TAB_ICONS.profile }
 ];
 
 const root = document.getElementById('app');
@@ -82,8 +83,8 @@ function shell() {
           </button>
         ` : `
           <button type="button" class="tab" data-nav="${t.id}">
-            <span class="tab-glyph" aria-hidden="true">${t.icon}</span>
-            <span>${t.label}</span>
+            <span class="tab-glyph">${t.icon}</span>
+            <span class="tab-label">${t.label}</span>
           </button>
         `).join('')}
       </nav>
