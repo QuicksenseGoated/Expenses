@@ -1,6 +1,6 @@
 import { BIZ } from '../strategy.js';
 import { DB } from '../storage.js';
-import { esc, toast, $, $all, modal } from './ui.js';
+import { esc, toast, $, $all, modal, brandHead } from './ui.js';
 
 export function renderScore(root, ctx) {
   const m = DB.getMetrics();
@@ -14,10 +14,7 @@ export function renderScore(root, ctx) {
     : null;
 
   root.innerHTML = `
-    <header class="brand-head">
-      <p class="brand">${esc(BIZ.name)}</p>
-      <p class="brand-sub">Score · north star ACV</p>
-    </header>
+    ${brandHead('Numbers that matter')}
 
     <section class="scorestrip big" aria-label="Current KPIs">
       <div>
@@ -34,21 +31,21 @@ export function renderScore(root, ctx) {
       </div>
     </section>
 
-    <form id="kpi-form" class="card stack">
-      <h2>Log snapshot</h2>
+    <form id="kpi-form" class="card stack" style="margin-top:10px">
+      <h2>Update numbers</h2>
       <label class="field"><span>Twitch ACV</span><input type="number" min="0" name="acv" value="${m.acv ?? ''}" inputmode="decimal" /></label>
-      <label class="field"><span>TikTok views (this week)</span><input type="number" min="0" name="ttWeek" value="${m.ttWeek ?? ''}" inputmode="numeric" /></label>
+      <label class="field"><span>TikTok views this week</span><input type="number" min="0" name="ttWeek" value="${m.ttWeek ?? ''}" inputmode="numeric" /></label>
       <label class="field"><span>Twitch followers</span><input type="number" min="0" name="followers" value="${m.followers ?? ''}" inputmode="numeric" /></label>
-      <label class="field"><span>Note</span><input name="note" placeholder="KOTH week / dead week" autocomplete="off" /></label>
-      <button class="btn primary block" type="submit">Save snapshot</button>
+      <label class="field"><span>Note</span><input name="note" placeholder="good KOTH week / dead week" autocomplete="off" /></label>
+      <button class="btn primary block" type="submit">Save</button>
     </form>
 
     <section class="card">
       <div class="rowbetween">
-        <h2>Decisions</h2>
-        <button type="button" class="btn sm" data-dec>+ Log</button>
+        <h2>Calls</h2>
+        <button type="button" class="btn sm" data-dec>+ Add</button>
       </div>
-      <p class="muted">Keep / kill / test only. No vibes — business calls.</p>
+      <p class="muted">Keep it, kill it, or test it. Write it down so you don’t argue with yourself next month.</p>
       <ul class="list">
         ${decisions.map((d) => `
           <li>
@@ -59,7 +56,7 @@ export function renderScore(root, ctx) {
             </div>
             <button type="button" class="link" data-del="${d.id}">Del</button>
           </li>
-        `).join('') || '<li class="muted">e.g. kill wheel · double KOTH Fridays</li>'}
+        `).join('') || '<li class="muted">e.g. kill the wheel · double KOTH Fridays</li>'}
       </ul>
     </section>
 
@@ -78,6 +75,8 @@ export function renderScore(root, ctx) {
         </ul>
       </section>
     ` : ''}
+
+    <p class="hint center">North star stays ${esc(BIZ.primaryMetric)}.</p>
   `;
 
   $('#kpi-form', root)?.addEventListener('submit', (e) => {
@@ -90,13 +89,13 @@ export function renderScore(root, ctx) {
       followers: num('followers'),
       note: String(fd.get('note') || '').trim()
     });
-    toast('Snapshot saved');
+    toast('Saved');
     ctx.refresh();
   });
 
   $('[data-dec]', root)?.addEventListener('click', () => {
     modal({
-      title: 'Log decision',
+      title: 'Log a call',
       okLabel: 'Add',
       body: `
         <label class="field"><span>Kind</span>
@@ -106,7 +105,7 @@ export function renderScore(root, ctx) {
             <option value="test">test</option>
           </select>
         </label>
-        <label class="field"><span>Decision</span>
+        <label class="field"><span>What</span>
           <input id="d-text" required placeholder="Double KOTH on Fridays" />
         </label>
       `,

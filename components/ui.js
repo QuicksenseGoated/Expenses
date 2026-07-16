@@ -28,6 +28,19 @@ export function esc(s = '') {
     .replace(/"/g, '&quot;');
 }
 
+/** Shared brand header with Twitch profile logo */
+export function brandHead(sub) {
+  return `
+    <header class="brand-head">
+      <img class="brand-logo" src="./icons/logo.png" width="52" height="52" alt="Quicksense" />
+      <div class="brand-text">
+        <p class="brand">Quicksense</p>
+        <p class="brand-sub">${esc(sub)}</p>
+      </div>
+    </header>
+  `;
+}
+
 export function modal({ title, body, onOk, okLabel = 'Save' }) {
   const overlay = document.createElement('div');
   overlay.className = 'sheet-overlay';

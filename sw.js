@@ -1,4 +1,4 @@
-const CACHE = 'qs-ops-v1.0';
+const CACHE = 'qs-ops-v1.1';
 const ASSETS = [
   './',
   './index.html',
@@ -8,8 +8,10 @@ const ASSETS = [
   './strategy.js',
   './sw.js',
   './manifest.webmanifest',
+  './icons/logo.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
   './components/ui.js',
   './components/week.js',
   './components/train.js',

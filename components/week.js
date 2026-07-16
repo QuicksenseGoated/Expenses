@@ -1,8 +1,8 @@
 import {
-  BIZ, WEEKDAY, FORMATS, formatById, todayIndex, QUOTAS
+  WEEKDAY, FORMATS, formatById, todayIndex, QUOTAS
 } from '../strategy.js';
 import { DB } from '../storage.js';
-import { esc, toast, $all } from './ui.js';
+import { esc, toast, $all, brandHead } from './ui.js';
 
 export function renderWeek(root, ctx) {
   const plan = DB.getPlan();
@@ -11,19 +11,16 @@ export function renderWeek(root, ctx) {
   const today = todayIndex();
 
   root.innerHTML = `
-    <header class="brand-head">
-      <p class="brand">${esc(BIZ.name)}</p>
-      <p class="brand-sub">Ops · week of ${esc(plan.week)}</p>
-    </header>
+    ${brandHead(`Week of ${plan.week}`)}
 
     <section class="scorestrip" aria-label="Week KPIs">
-      <div><b>${prog.pct}%</b><span>plan</span></div>
+      <div><b>${prog.pct}%</b><span>done</span></div>
       <div><b>${m.acv ?? '—'}</b><span>ACV</span></div>
       <div><b>${fmt(m.ttWeek)}</b><span>TT/wk</span></div>
     </section>
     <div class="bar" aria-hidden="true"><i style="width:${prog.pct}%"></i></div>
 
-    <p class="hint">Quota: ${QUOTAS.siegeStreams} Siege · ${QUOTAS.varietyStreams} variety · ${QUOTAS.minHoursLive}+ hrs. Ladder posts clips — you pick the format and raid out.</p>
+    <p class="hint">${QUOTAS.siegeStreams} Siege days, 1 variety. Pick a format, go live, approve Ladder, raid out. That’s the whole loop.</p>
 
     <div class="daylist">
       ${plan.days.map((day, i) => dayCard(day, i, today)).join('')}
@@ -33,7 +30,7 @@ export function renderWeek(root, ctx) {
   $all('[data-fmt]', root).forEach((sel) => {
     sel.addEventListener('change', () => {
       DB.setDayFormat(Number(sel.dataset.fmt), sel.value || null);
-      toast('Format locked');
+      toast('Saved');
       ctx.refresh();
     });
   });
@@ -68,11 +65,11 @@ function dayCard(day, i, today) {
       </div>
 
       ${ops ? `
-        <p class="muted">Ops day: log ACV + TT views in Score. Confirm next week formats. Check raid list.</p>
-        <label class="check"><input type="checkbox" data-check="${i}:ops" ${DB.isDone(i, 'ops') ? 'checked' : ''}/> Metrics + plan logged</label>
+        <p class="muted">Off-stream day. Drop ACV + TikTok numbers in Score, skim next week’s formats, make sure the raid list isn’t empty.</p>
+        <label class="check"><input type="checkbox" data-check="${i}:ops" ${DB.isDone(i, 'ops') ? 'checked' : ''}/> Numbers logged</label>
       ` : `
         <label class="field">
-          <span>Named format</span>
+          <span>Format</span>
           <select data-fmt="${i}" aria-label="Format for ${WEEKDAY[i]}">${options}</select>
         </label>
         ${fmtObj ? `<p class="title-line"><span>Title</span> ${esc(fmtObj.title)}</p>` : ''}
@@ -83,9 +80,9 @@ function dayCard(day, i, today) {
         </div>
         ${fmtObj && isToday ? `
           <details class="sop" open>
-            <summary>Today run sheet</summary>
+            <summary>Today’s run sheet</summary>
             <ol>${fmtObj.setup.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
-            <p class="muted">Win look: ${esc(fmtObj.success)}</p>
+            <p class="muted">Looks good when: ${esc(fmtObj.success)}</p>
           </details>
         ` : ''}
       `}

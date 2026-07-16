@@ -1,15 +1,16 @@
 {
   "name": "Quicksense Ops",
-  "short_name": "QS Ops",
-  "description": "Creator business OS — week plan, trainer, strategy, KPIs.",
+  "short_name": "Quicksense",
+  "description": "Week plan, trainer, strategy, KPIs — for Quicksense.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0e1110",
-  "theme_color": "#0e1110",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
