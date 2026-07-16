@@ -1,4 +1,4 @@
-const CACHE = 'sense-desk-v3';
+const CACHE = 'sense-desk-v3.1';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS = [
   './app.js',
   './storage.js',
   './facts.js',
+  './analytics.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

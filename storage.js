@@ -6,7 +6,9 @@ const KEYS = {
   posts: 'sense.posts',
   checks: 'sense.checks',
   savedIdeas: 'sense.savedIdeas',
-  focus: 'sense.focusPlay'
+  focus: 'sense.focusPlay',
+  raids: 'sense.raids',
+  customIdeas: 'sense.customIdeas'
 };
 
 function read(key, fallback) {
@@ -28,20 +30,27 @@ function uid(p) {
 
 export const Storage = {
   ensureSeeded() {
-    if (read(KEYS.seeded, false)) return;
-    write(KEYS.score, {
-      twitchAcv: null,
-      twitchFollowers: null,
-      tiktokViewsWeek: null,
-      tiktokFollowers: null,
-      history: [],
-      updatedAt: null
-    });
-    write(KEYS.posts, []);
-    write(KEYS.checks, {});
-    write(KEYS.savedIdeas, []);
-    write(KEYS.focus, FOCUS_PLAYS[0].id);
-    write(KEYS.seeded, true);
+    if (!read(KEYS.seeded, false)) {
+      write(KEYS.score, {
+        twitchAcv: null,
+        twitchFollowers: null,
+        tiktokViewsWeek: null,
+        tiktokFollowers: null,
+        history: [],
+        updatedAt: null
+      });
+      write(KEYS.posts, []);
+      write(KEYS.checks, {});
+      write(KEYS.savedIdeas, []);
+      write(KEYS.focus, FOCUS_PLAYS[0].id);
+      write(KEYS.raids, []);
+      write(KEYS.customIdeas, []);
+      write(KEYS.seeded, true);
+      return;
+    }
+    // additive migrations
+    if (read(KEYS.raids, null) == null) write(KEYS.raids, []);
+    if (read(KEYS.customIdeas, null) == null) write(KEYS.customIdeas, []);
   },
 
   reset() {
@@ -87,10 +96,11 @@ export const Storage = {
       views: null,
       date: new Date().toISOString().slice(0, 10),
       note: '',
+      tag: null,
+      ideaId: null,
       ...post
     };
-    const posts = [item, ...this.getPosts()].slice(0, 200);
-    write(KEYS.posts, posts);
+    write(KEYS.posts, [item, ...this.getPosts()].slice(0, 200));
     return item;
   },
 
@@ -147,6 +157,49 @@ export const Storage = {
     write(KEYS.focus, id);
   },
 
+  getRaids() {
+    return read(KEYS.raids, []);
+  },
+
+  saveRaids(list) {
+    write(KEYS.raids, list.slice(0, 12));
+  },
+
+  addRaid(name) {
+    const n = String(name || '').trim().replace(/^@/, '');
+    if (!n) return this.getRaids();
+    const list = [n, ...this.getRaids().filter((x) => x.toLowerCase() !== n.toLowerCase())];
+    this.saveRaids(list);
+    return list;
+  },
+
+  removeRaid(name) {
+    this.saveRaids(this.getRaids().filter((x) => x !== name));
+  },
+
+  getCustomIdeas() {
+    return read(KEYS.customIdeas, []);
+  },
+
+  addCustomIdea(idea) {
+    const item = {
+      id: uid('ci'),
+      tag: 'custom',
+      hook: '',
+      caption: '',
+      use: '',
+      why: 'Your hook',
+      custom: true,
+      ...idea
+    };
+    write(KEYS.customIdeas, [item, ...this.getCustomIdeas()].slice(0, 50));
+    return item;
+  },
+
+  deleteCustomIdea(id) {
+    write(KEYS.customIdeas, this.getCustomIdeas().filter((i) => i.id !== id));
+  },
+
   exportAll() {
     return {
       v: 3,
@@ -155,7 +208,9 @@ export const Storage = {
       posts: this.getPosts(),
       checks: this.getChecks(),
       savedIdeas: [...this.getSavedIdeas()],
-      focus: this.getFocusPlayId()
+      focus: this.getFocusPlayId(),
+      raids: this.getRaids(),
+      customIdeas: this.getCustomIdeas()
     };
   },
 
@@ -166,6 +221,8 @@ export const Storage = {
     if (data.checks) write(KEYS.checks, data.checks);
     if (data.savedIdeas) write(KEYS.savedIdeas, data.savedIdeas);
     if (data.focus) write(KEYS.focus, data.focus);
+    if (data.raids) write(KEYS.raids, data.raids);
+    if (data.customIdeas) write(KEYS.customIdeas, data.customIdeas);
     write(KEYS.seeded, true);
   }
 };
