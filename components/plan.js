@@ -1,5 +1,5 @@
 import { Store } from '../store.js';
-import { CATALOG } from '../catalog.js';
+import { PRODUCT_COUNT } from '../catalog.js';
 import { money, niceDate, esc } from './ui.js';
 
 export function renderPlan(root, ctx) {
@@ -106,7 +106,7 @@ function buildTips({ s, safe, subs, monthSpend, cancelSoon }) {
     tips.push({ tone: 'ok', title: 'Spending buffer', body: `After upcoming bills, about ${money(safe, s.currency)} is free to use.` });
   }
   if (!s.subscriptions.length) {
-    tips.push({ tone: 'accent', title: 'Audit your stack', body: `Search ${CATALOG.length}+ services in Bills — only add what you pay.` });
+    tips.push({ tone: 'accent', title: 'Audit your stack', body: `Browse ${PRODUCT_COUNT} products in Bills — pick a plan for each service you pay.` });
   } else if (subs > s.balance * 0.4) {
     tips.push({ tone: 'warn', title: 'Heavy subscription load', body: `${money(subs, s.currency)}/mo is a large share of your balance. Review cancel windows.` });
   }

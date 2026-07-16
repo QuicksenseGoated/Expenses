@@ -1,5 +1,5 @@
 import { Store } from '../store.js';
-import { CATALOG, CATALOG_SIZE } from '../catalog.js';
+import { PRODUCT_COUNT, CATALOG_SIZE } from '../catalog.js';
 import { toast } from './ui.js';
 
 export function renderProfile(root, ctx) {
@@ -12,7 +12,7 @@ export function renderProfile(root, ctx) {
     </header>
 
     <section class="profile-card">
-      <img src="./icons/logo.png" width="64" height="64" alt="Financer" class="profile-logo" />
+      <img src="./icons/logo.png" width="96" height="96" alt="Financer" class="profile-logo bank-logo" />
       <h2>Financer</h2>
       <p>Balance tracking · subscription intelligence · spend runway</p>
     </section>
@@ -43,7 +43,7 @@ export function renderProfile(root, ctx) {
         <div><dt>Balance set</dt><dd>${s.balance == null ? 'No' : 'Yes'}</dd></div>
         <div><dt>Subscriptions</dt><dd>${s.subscriptions.length}</dd></div>
         <div><dt>Transactions</dt><dd>${s.transactions.length}</dd></div>
-        <div><dt>Catalog</dt><dd>${CATALOG_SIZE}+ plans</dd></div>
+        <div><dt>Catalog</dt><dd>${PRODUCT_COUNT} products · ${CATALOG_SIZE}+ plans</dd></div>
       </dl>
     </section>
 

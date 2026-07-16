@@ -1,5 +1,7 @@
 /** Local Financer state — balance, spends, subscriptions. */
 
+import { migrateCatalogId } from './catalog.js';
+
 const KEY = 'financer.v2';
 const LEGACY = 'financer.v1';
 
@@ -15,13 +17,25 @@ const empty = () => ({
   ]
 });
 
+function normalize(state) {
+  let changed = false;
+  const next = { ...state };
+  next.subscriptions = (next.subscriptions || []).map((sub) => {
+    const catalogId = migrateCatalogId(sub.catalogId);
+    if (catalogId !== sub.catalogId) changed = true;
+    return catalogId === sub.catalogId ? sub : { ...sub, catalogId };
+  });
+  if (changed) write(next);
+  return next;
+}
+
 function read() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...empty(), ...JSON.parse(raw) };
+    if (raw) return normalize({ ...empty(), ...JSON.parse(raw) });
     const legacy = localStorage.getItem(LEGACY);
     if (legacy) {
-      const migrated = { ...empty(), ...JSON.parse(legacy) };
+      const migrated = normalize({ ...empty(), ...JSON.parse(legacy) });
       write(migrated);
       return migrated;
     }

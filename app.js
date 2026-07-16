@@ -4,6 +4,7 @@ import { renderBills, renderCatalog, renderSubDetail } from './components/bills.
 import { renderActivity } from './components/activity.js';
 import { renderPlan } from './components/plan.js';
 import { renderProfile } from './components/profile.js';
+import { initInstallPrompt } from './components/install.js';
 
 const TABS = [
   { id: 'home', label: 'Home', icon: '◉' },
@@ -67,6 +68,7 @@ function boot() {
   Store.get();
   shell();
   paint();
+  initInstallPrompt();
 }
 
 function shell() {
