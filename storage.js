@@ -1,22 +1,18 @@
-import { PROFILE, PILLARS } from './profile.js';
-import { GROWTH_PLAYS, suggestClipsFromFormulas, buildWeeklyPlan } from './playbook.js';
+import { FOCUS_PLAYS } from './facts.js';
 
 const KEYS = {
-  meta: 'sense.meta',
-  scoreboard: 'sense.scoreboard',
-  clips: 'sense.clips',
-  plays: 'sense.plays',
-  checklist: 'sense.dayChecklist',
-  notes: 'sense.notes',
-  settings: 'sense.settings',
-  seeded: 'sense.seeded.v2'
+  seeded: 'sense.v3',
+  score: 'sense.score',
+  posts: 'sense.posts',
+  checks: 'sense.checks',
+  savedIdeas: 'sense.savedIdeas',
+  focus: 'sense.focusPlay'
 };
 
 function read(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
-    if (raw == null) return fallback;
-    return JSON.parse(raw);
+    return raw == null ? fallback : JSON.parse(raw);
   } catch {
     return fallback;
   }
@@ -26,223 +22,150 @@ function write(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-function uid(prefix = 'id') {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+function uid(p) {
+  return `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
-
-const DEFAULT_SCOREBOARD = {
-  twitchFollowers: null,
-  twitchAvgViewers: null,
-  tiktokViewsWeek: null,
-  tiktokFollowers: null,
-  youtubeSubs: null,
-  history: [], // { date, twitchAvgViewers, tiktokViewsWeek, note }
-  updatedAt: null
-};
-
-const DEFAULT_SETTINGS = {
-  varietyDay: 6, // Saturday
-  clipsPerSiegeDay: 3,
-  showManagerTone: true
-};
 
 export const Storage = {
   ensureSeeded() {
-    if (read(KEYS.seeded, false)) return false;
-    this.seed();
-    write(KEYS.seeded, true);
-    return true;
-  },
-
-  seed() {
-    write(KEYS.meta, {
-      client: PROFILE.displayName,
-      seededAt: new Date().toISOString(),
-      version: 2
+    if (read(KEYS.seeded, false)) return;
+    write(KEYS.score, {
+      twitchAcv: null,
+      twitchFollowers: null,
+      tiktokViewsWeek: null,
+      tiktokFollowers: null,
+      history: [],
+      updatedAt: null
     });
-    write(KEYS.scoreboard, { ...DEFAULT_SCOREBOARD });
-    write(KEYS.plays, GROWTH_PLAYS.map((p) => ({
-      ...p,
-      progress: p.status === 'core' ? 'running' : 'queued',
-      logs: []
-    })));
-    write(KEYS.clips, suggestClipsFromFormulas(6).map((c) => ({
-      ...c,
-      id: uid('clip'),
-      createdAt: new Date().toISOString(),
-      pillarId: PILLARS[0].id
-    })));
-    write(KEYS.checklist, {});
-    write(KEYS.notes, []);
-    write(KEYS.settings, { ...DEFAULT_SETTINGS });
+    write(KEYS.posts, []);
+    write(KEYS.checks, {});
+    write(KEYS.savedIdeas, []);
+    write(KEYS.focus, FOCUS_PLAYS[0].id);
+    write(KEYS.seeded, true);
   },
 
-  resetAll() {
+  reset() {
     Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+    localStorage.removeItem('sense.route');
     this.ensureSeeded();
   },
 
-  getProfile() {
-    return PROFILE;
+  getScore() {
+    return read(KEYS.score, {});
   },
 
-  getSettings() {
-    return { ...DEFAULT_SETTINGS, ...read(KEYS.settings, {}) };
-  },
-
-  saveSettings(patch) {
-    const next = { ...this.getSettings(), ...patch };
-    write(KEYS.settings, next);
+  saveScore(patch) {
+    const next = { ...this.getScore(), ...patch, updatedAt: new Date().toISOString() };
+    write(KEYS.score, next);
     return next;
   },
 
-  getScoreboard() {
-    return { ...DEFAULT_SCOREBOARD, ...read(KEYS.scoreboard, {}) };
-  },
-
-  saveScoreboard(patch) {
-    const prev = this.getScoreboard();
-    const next = {
-      ...prev,
-      ...patch,
-      updatedAt: new Date().toISOString()
-    };
-    write(KEYS.scoreboard, next);
-    return next;
-  },
-
-  logScoreboardSnapshot(note = '') {
-    const s = this.getScoreboard();
+  snapshot(note = '') {
+    const s = this.getScore();
     const entry = {
-      id: uid('snap'),
+      id: uid('h'),
       date: new Date().toISOString().slice(0, 10),
-      twitchAvgViewers: s.twitchAvgViewers,
+      twitchAcv: s.twitchAcv,
       tiktokViewsWeek: s.tiktokViewsWeek,
       twitchFollowers: s.twitchFollowers,
+      tiktokFollowers: s.tiktokFollowers,
       note
     };
-    const history = [entry, ...(s.history || [])].slice(0, 60);
-    return this.saveScoreboard({ history });
+    const history = [entry, ...(s.history || [])].slice(0, 52);
+    return this.saveScore({ history });
   },
 
-  getClips() {
-    return read(KEYS.clips, []);
+  getPosts() {
+    return read(KEYS.posts, []);
   },
 
-  saveClips(clips) {
-    write(KEYS.clips, clips);
-    return clips;
-  },
-
-  addClip(clip) {
-    const clips = this.getClips();
+  addPost(post) {
     const item = {
-      id: uid('clip'),
+      id: uid('p'),
       title: '',
-      caption: '',
       platform: 'tiktok',
-      alsoPost: 'youtube',
-      formulaId: null,
-      pillarId: PILLARS[0].id,
-      status: 'todo', // todo | editing | posted | winner | killed
       views: null,
-      tip: '',
-      streamDate: null,
-      createdAt: new Date().toISOString(),
-      ...clip
+      date: new Date().toISOString().slice(0, 10),
+      note: '',
+      ...post
     };
-    clips.unshift(item);
-    this.saveClips(clips);
+    const posts = [item, ...this.getPosts()].slice(0, 200);
+    write(KEYS.posts, posts);
     return item;
   },
 
-  updateClip(id, patch) {
-    const clips = this.getClips();
-    const idx = clips.findIndex((c) => c.id === id);
-    if (idx === -1) return null;
-    clips[idx] = { ...clips[idx], ...patch, updatedAt: new Date().toISOString() };
-    this.saveClips(clips);
-    return clips[idx];
+  updatePost(id, patch) {
+    const posts = this.getPosts();
+    const i = posts.findIndex((p) => p.id === id);
+    if (i < 0) return null;
+    posts[i] = { ...posts[i], ...patch };
+    write(KEYS.posts, posts);
+    return posts[i];
   },
 
-  deleteClip(id) {
-    this.saveClips(this.getClips().filter((c) => c.id !== id));
+  deletePost(id) {
+    write(KEYS.posts, this.getPosts().filter((p) => p.id !== id));
   },
 
-  getPlays() {
-    return read(KEYS.plays, []);
+  topPosts(n = 5) {
+    return [...this.getPosts()]
+      .filter((p) => p.views != null)
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, n);
   },
 
-  savePlays(plays) {
-    write(KEYS.plays, plays);
-    return plays;
+  getChecks() {
+    return read(KEYS.checks, {});
   },
 
-  updatePlay(id, patch) {
-    const plays = this.getPlays();
-    const idx = plays.findIndex((p) => p.id === id);
-    if (idx === -1) return null;
-    plays[idx] = { ...plays[idx], ...patch };
-    this.savePlays(plays);
-    return plays[idx];
+  toggleCheck(dayIso, index) {
+    const all = this.getChecks();
+    const day = { ...(all[dayIso] || {}) };
+    day[index] = !day[index];
+    all[dayIso] = day;
+    write(KEYS.checks, all);
+    return day;
   },
 
-  logPlay(id, note) {
-    const play = this.getPlays().find((p) => p.id === id);
-    if (!play) return null;
-    const logs = [{ at: new Date().toISOString(), note }, ...(play.logs || [])].slice(0, 20);
-    return this.updatePlay(id, { logs, progress: 'running' });
+  getSavedIdeas() {
+    return new Set(read(KEYS.savedIdeas, []));
   },
 
-  getChecklist() {
-    return read(KEYS.checklist, {});
+  toggleSavedIdea(id) {
+    const set = this.getSavedIdeas();
+    if (set.has(id)) set.delete(id);
+    else set.add(id);
+    write(KEYS.savedIdeas, [...set]);
+    return set;
   },
 
-  toggleChecklist(dateKey, actionIndex) {
-    const all = this.getChecklist();
-    const day = { ...(all[dateKey] || {}) };
-    day[actionIndex] = !day[actionIndex];
-    all[dateKey] = day;
-    write(KEYS.checklist, all);
-    return all;
+  getFocusPlayId() {
+    return read(KEYS.focus, FOCUS_PLAYS[0].id);
   },
 
-  getNotes() {
-    return read(KEYS.notes, []);
-  },
-
-  addNote(text) {
-    const notes = this.getNotes();
-    notes.unshift({ id: uid('note'), text, at: new Date().toISOString() });
-    write(KEYS.notes, notes.slice(0, 100));
-    return notes;
-  },
-
-  getWeekPlan() {
-    return buildWeeklyPlan(new Date());
+  setFocusPlayId(id) {
+    write(KEYS.focus, id);
   },
 
   exportAll() {
     return {
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      scoreboard: this.getScoreboard(),
-      clips: this.getClips(),
-      plays: this.getPlays(),
-      checklist: this.getChecklist(),
-      notes: this.getNotes(),
-      settings: this.getSettings()
+      v: 3,
+      at: new Date().toISOString(),
+      score: this.getScore(),
+      posts: this.getPosts(),
+      checks: this.getChecks(),
+      savedIdeas: [...this.getSavedIdeas()],
+      focus: this.getFocusPlayId()
     };
   },
 
   importAll(data) {
-    if (!data || typeof data !== 'object') throw new Error('Invalid import');
-    if (data.scoreboard) write(KEYS.scoreboard, data.scoreboard);
-    if (data.clips) write(KEYS.clips, data.clips);
-    if (data.plays) write(KEYS.plays, data.plays);
-    if (data.checklist) write(KEYS.checklist, data.checklist);
-    if (data.notes) write(KEYS.notes, data.notes);
-    if (data.settings) write(KEYS.settings, data.settings);
+    if (!data || data.v !== 3) throw new Error('Need Sense Desk v3 export');
+    if (data.score) write(KEYS.score, data.score);
+    if (data.posts) write(KEYS.posts, data.posts);
+    if (data.checks) write(KEYS.checks, data.checks);
+    if (data.savedIdeas) write(KEYS.savedIdeas, data.savedIdeas);
+    if (data.focus) write(KEYS.focus, data.focus);
     write(KEYS.seeded, true);
   }
 };

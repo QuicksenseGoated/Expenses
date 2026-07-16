@@ -29,7 +29,7 @@ jobs:
       - name: Prepare public site
         run: |
           mkdir -p public
-          cp index.html styles.css app.js storage.js profile.js playbook.js sw.js manifest.webmanifest .nojekyll public/
+          cp index.html styles.css app.js storage.js facts.js sw.js manifest.webmanifest .nojekyll public/
           cp -r components icons public/
 
       - name: Setup Pages

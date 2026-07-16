@@ -1,27 +1,20 @@
 import { Storage } from './storage.js';
-import { PROFILE } from './profile.js';
-import { renderBriefing } from './components/briefing.js';
-import { renderWeek } from './components/week.js';
-import { renderClips } from './components/clips.js';
-import { renderPlays } from './components/plays.js';
-import { renderScoreboard } from './components/scoreboard.js';
-import { renderPlaybook } from './components/playbook.js';
-import { renderSettings } from './components/settings.js';
+import { CLIENT } from './facts.js';
+import { renderToday } from './components/today.js';
+import { renderIdeas } from './components/ideas.js';
+import { renderNumbers } from './components/numbers.js';
+import { renderMore } from './components/more.js';
 
 const NAV = [
-  { id: 'briefing', label: 'Brief', short: 'Brief' },
-  { id: 'week', label: 'This Week', short: 'Week' },
-  { id: 'clips', label: 'Clip Factory', short: 'Clips' },
-  { id: 'plays', label: 'Growth Plays', short: 'Plays' },
-  { id: 'scoreboard', label: 'Scoreboard', short: 'Stats' },
-  { id: 'playbook', label: 'Playbook', short: 'Book' },
-  { id: 'settings', label: 'Settings', short: 'More' }
+  { id: 'today', label: 'Today' },
+  { id: 'ideas', label: 'Ideas' },
+  { id: 'numbers', label: 'Numbers' },
+  { id: 'more', label: 'More' }
 ];
 
-const MOBILE_PRIMARY = ['briefing', 'week', 'clips', 'plays', 'scoreboard'];
-
 const appRoot = document.getElementById('app');
-let route = localStorage.getItem('sense.route') || 'briefing';
+let route = localStorage.getItem('sense.route') || 'today';
+if (!NAV.some((n) => n.id === route)) route = 'today';
 
 const ctx = {
   navigate(id) {
@@ -33,155 +26,91 @@ const ctx = {
   refresh() {
     render();
   },
-  toast(message) {
-    showToast(message);
+  toast(msg) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.hidden = false;
+    el.classList.add('show');
+    clearTimeout(ctx._t);
+    ctx._t = setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => { el.hidden = true; }, 180);
+    }, 1800);
   }
 };
 
 function boot() {
+  // migrate off legacy seed keys
+  if (localStorage.getItem('sense.seeded.v2') && !localStorage.getItem('sense.v3')) {
+    localStorage.removeItem('sense.seeded.v2');
+  }
   Storage.ensureSeeded();
-  renderShell();
+  shell();
   render();
 }
 
-function renderShell() {
+function shell() {
   appRoot.innerHTML = `
-    <div class="shell">
+    <div class="shell slim">
       <div class="atmosphere" aria-hidden="true"></div>
       <aside class="sidebar desktop-nav">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true">${PROFILE.brandMark}</div>
+          <div class="brand-mark">${CLIENT.name.slice(0, 2).toUpperCase()}</div>
           <div>
             <strong>Sense Desk</strong>
-            <span>${PROFILE.displayName} · social manager</span>
+            <span>${CLIENT.twitch}</span>
           </div>
         </div>
         <nav class="nav">
-          ${NAV.map((item) => `
-            <button type="button" class="nav-item" data-nav="${item.id}">
-              <i class="nav-dot" aria-hidden="true"></i>
-              ${item.label}
+          ${NAV.map((n) => `
+            <button type="button" class="nav-item" data-nav="${n.id}">
+              <i class="nav-dot"></i>${n.label}
             </button>
           `).join('')}
         </nav>
         <div class="sidebar-foot">
-          <p>Twitch is the product</p>
-          <a class="btn primary full" href="${PROFILE.urls.twitch}" target="_blank" rel="noopener">Open Twitch</a>
+          <a class="btn primary full" href="${CLIENT.twitchUrl}" target="_blank" rel="noopener">Twitch</a>
         </div>
       </aside>
 
       <div class="mobile-top">
         <div class="brand compact">
-          <div class="brand-mark" aria-hidden="true">${PROFILE.brandMark}</div>
-          <div>
-            <strong>Sense Desk</strong>
-            <span>Manager</span>
-          </div>
+          <div class="brand-mark">QS</div>
+          <div><strong>Sense Desk</strong><span>ACV + clips</span></div>
         </div>
-        <button type="button" class="icon-btn mobile-more" data-nav="settings" aria-label="Settings">⋯</button>
       </div>
 
       <main class="main" id="main"></main>
 
-      <nav class="mobile-nav" aria-label="Primary">
-        ${NAV.filter((n) => MOBILE_PRIMARY.includes(n.id)).map((item) => `
-          <button type="button" class="mobile-nav-item" data-nav="${item.id}">
-            <span class="mobile-nav-dot"></span>
-            ${item.short}
+      <nav class="mobile-nav four">
+        ${NAV.map((n) => `
+          <button type="button" class="mobile-nav-item" data-nav="${n.id}">
+            <span class="mobile-nav-dot"></span>${n.label}
           </button>
         `).join('')}
       </nav>
     </div>
     <div id="toast" class="toast" hidden></div>
-    <div id="install-bar" class="install-bar" hidden>
-      <span>Add Sense Desk to your home screen</span>
-      <button type="button" class="btn primary" id="install-btn">Install</button>
-      <button type="button" class="icon-btn" id="install-dismiss" aria-label="Dismiss">✕</button>
-    </div>
   `;
 
-  appRoot.querySelectorAll('[data-nav]').forEach((btn) => {
-    btn.addEventListener('click', () => ctx.navigate(btn.dataset.nav));
+  appRoot.querySelectorAll('[data-nav]').forEach((b) => {
+    b.addEventListener('click', () => ctx.navigate(b.dataset.nav));
   });
-
-  setupInstallPrompt();
 }
 
 function render() {
-  if (!document.getElementById('main')) renderShell();
+  if (!document.getElementById('main')) shell();
+  appRoot.querySelectorAll('[data-nav]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.nav === route);
+  });
   const main = document.getElementById('main');
-  appRoot.querySelectorAll('[data-nav]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.nav === route);
-  });
-
-  const views = {
-    briefing: renderBriefing,
-    week: renderWeek,
-    clips: renderClips,
-    plays: renderPlays,
-    scoreboard: renderScoreboard,
-    playbook: renderPlaybook,
-    settings: renderSettings
-  };
-
+  const views = { today: renderToday, ideas: renderIdeas, numbers: renderNumbers, more: renderMore };
   main.innerHTML = '';
-  const view = document.createElement('div');
-  view.className = 'view-root view-enter';
-  main.appendChild(view);
-  (views[route] || renderBriefing)(view, ctx);
-}
-
-function showToast(message) {
-  const el = document.getElementById('toast');
-  if (!el) return;
-  el.textContent = message;
-  el.hidden = false;
-  el.classList.add('show');
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => {
-    el.classList.remove('show');
-    setTimeout(() => { el.hidden = true; }, 200);
-  }, 2200);
-}
-
-let deferredPrompt = null;
-
-function setupInstallPrompt() {
-  const bar = document.getElementById('install-bar');
-  const btn = document.getElementById('install-btn');
-  const dismiss = document.getElementById('install-dismiss');
-  if (!bar) return;
-
-  if (localStorage.getItem('sense.installDismissed') === '1') return;
-
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    bar.hidden = false;
-  });
-
-  // iOS hint (no beforeinstallprompt)
-  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    || navigator.standalone === true;
-  if (isIos && !isStandalone && !localStorage.getItem('sense.installDismissed')) {
-    bar.hidden = false;
-    bar.querySelector('span').textContent = 'iPhone: Share → Add to Home Screen';
-    btn.hidden = true;
-  }
-
-  btn?.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    bar.hidden = true;
-  });
-
-  dismiss?.addEventListener('click', () => {
-    localStorage.setItem('sense.installDismissed', '1');
-    bar.hidden = true;
-  });
+  const el = document.createElement('div');
+  el.className = 'view-root view-enter';
+  main.appendChild(el);
+  (views[route] || renderToday)(el, ctx);
 }
 
 boot();
