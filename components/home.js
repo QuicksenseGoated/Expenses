@@ -17,15 +17,12 @@ export function renderHome(root, ctx) {
   root.innerHTML = `
     <header class="topbar">
       <div class="topbar-brand">
-        <img src="./icons/logo.png" width="56" height="56" alt="" class="bank-logo" />
+        <img src="./icons/logo.png" width="80" height="80" alt="Financer" class="bank-logo bank-logo-hero" />
         <div>
           <p class="greet">${greeting()}</p>
           <h1 class="logo-word">Financer</h1>
         </div>
       </div>
-      <button type="button" class="avatar" data-go="profile" aria-label="Profile">
-        <img src="./icons/logo.png" width="44" height="44" alt="" />
-      </button>
     </header>
 
     <section class="balance-card">

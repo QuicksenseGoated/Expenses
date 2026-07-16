@@ -9,7 +9,7 @@ import { initInstallPrompt } from './components/install.js';
 const TABS = [
   { id: 'home', label: 'Home', icon: '◉' },
   { id: 'bills', label: 'Bills', icon: '▣' },
-  { id: 'activity', label: 'Activity', icon: '↕' },
+  { id: 'spend', label: 'Spend', icon: '+', center: true },
   { id: 'plan', label: 'Plan', icon: '◎' },
   { id: 'profile', label: 'You', icon: '◌' }
 ];
@@ -75,9 +75,12 @@ function shell() {
   root.innerHTML = `
     <div class="phone">
       <main id="main" class="main"></main>
-      <button type="button" class="fab" id="fab" aria-label="Log spend">+</button>
       <nav class="tabbar" aria-label="Primary">
-        ${TABS.map((t) => `
+        ${TABS.map((t) => t.center ? `
+          <button type="button" class="tab tab-spend" id="tab-spend" aria-label="Log spend">
+            <span class="tab-spend-ring" aria-hidden="true">+</span>
+          </button>
+        ` : `
           <button type="button" class="tab" data-nav="${t.id}">
             <span class="tab-glyph" aria-hidden="true">${t.icon}</span>
             <span>${t.label}</span>
@@ -89,7 +92,7 @@ function shell() {
   root.querySelectorAll('[data-nav]').forEach((b) => {
     b.addEventListener('click', () => ctx.navigate(b.dataset.nav));
   });
-  document.getElementById('fab')?.addEventListener('click', () => ctx.openSpend());
+  document.getElementById('tab-spend')?.addEventListener('click', () => ctx.openSpend());
 }
 
 function paint() {
@@ -99,7 +102,6 @@ function paint() {
     b.classList.toggle('active', !onOverlay && b.dataset.nav === route);
   });
   root.querySelector('.tabbar')?.classList.toggle('hidden', onOverlay);
-  root.querySelector('.fab')?.classList.toggle('hidden', onOverlay);
 
   document.title = `${TABS.find((t) => t.id === route)?.label || 'Financer'} · Financer`;
 

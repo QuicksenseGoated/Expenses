@@ -223,7 +223,7 @@ export function renderCatalog(root, ctx, catalogId) {
         <h2>Choose your plan</h2>
         <p class="panel-sub">One product — pick the tier you actually pay for.</p>
         <div class="plan-picker">
-          ${product.plans.map((plan) => {
+          ${[...product.plans].sort((a, b) => a.price - b.price).map((plan) => {
             const key = catalogKey(product.id, plan.id);
             const owned = s.subscriptions.some((x) => x.catalogId === key);
             return `
@@ -240,7 +240,12 @@ export function renderCatalog(root, ctx, catalogId) {
         </div>
       </section>
 
-      ${product.url ? `<a class="btn outline block" href="${esc(product.url)}" target="_blank" rel="noopener">Visit ${esc(product.name)}</a>` : ''}
+      ${product.pricingUrl || product.url ? `
+        <div class="link-row">
+          ${product.url ? `<a class="btn outline" href="${esc(product.url)}" target="_blank" rel="noopener">Website</a>` : ''}
+          ${product.pricingUrl ? `<a class="btn outline" href="${esc(product.pricingUrl)}" target="_blank" rel="noopener">Official pricing</a>` : ''}
+        </div>
+      ` : ''}
     `;
 
     root.querySelector('[data-back]')?.addEventListener('click', () => ctx.back());
@@ -277,6 +282,7 @@ export function renderCatalog(root, ctx, catalogId) {
 
     <div class="link-row">
       ${entry.url ? `<a class="btn outline" href="${esc(entry.url)}" target="_blank" rel="noopener">Website</a>` : ''}
+      ${entry.pricingUrl ? `<a class="btn outline" href="${esc(entry.pricingUrl)}" target="_blank" rel="noopener">Official pricing</a>` : ''}
     </div>
 
     ${owned ? `
