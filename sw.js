@@ -1,4 +1,4 @@
-const CACHE = 'qs-ops-v1.1';
+const CACHE = 'qs-ops-v1.2';
 const ASSETS = [
   './',
   './index.html',

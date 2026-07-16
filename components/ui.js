@@ -32,7 +32,7 @@ export function esc(s = '') {
 export function brandHead(sub) {
   return `
     <header class="brand-head">
-      <img class="brand-logo" src="./icons/logo.png" width="52" height="52" alt="Quicksense" />
+      <img class="brand-logo" src="./icons/logo.png" width="48" height="48" alt="Quicksense" />
       <div class="brand-text">
         <p class="brand">Quicksense</p>
         <p class="brand-sub">${esc(sub)}</p>
