@@ -17,6 +17,9 @@ export const CATEGORIES = [
   { id: "education", label: "Education", icon: "📚" },
   { id: "security", label: "Security", icon: "🔒" },
   { id: "creative", label: "Creative", icon: "🎨" },
+  { id: "developer", label: "Developer", icon: "👨‍💻" },
+  { id: "dating", label: "Dating", icon: "💕" },
+  { id: "shopping", label: "Shopping", icon: "🛍️" },
   { id: "other", label: "Other", icon: "📦" },
 ];
 
@@ -85,6 +88,8 @@ export function getCatalogEntry(catalogId) {
     why: product.why,
     when: product.when,
     how: product.how,
+    billingAnchor: product.billingAnchor || null,
+    billingSource: product.billingSource || null,
     price: plan?.price ?? sorted[0]?.price ?? 0,
     cycle: plan?.cycle ?? sorted[0]?.cycle ?? "monthly",
     blurb: plan?.blurb || sorted[0]?.blurb || "",

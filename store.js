@@ -1,9 +1,12 @@
-/** Local Financer state — balance, spends, subscriptions. */
+/** Local Financer state — balance, spends, subscriptions, settings. */
 
 import { migrateCatalogId } from './catalog.js';
+import { projectNextBill, projectCancelBy, daysUntilPayday, billsBeforePayday } from './billing.js';
 
-const KEY = 'financer.v2';
-const LEGACY = 'financer.v1';
+const KEY = 'financer.v3';
+const LEGACY_KEYS = ['financer.v2', 'financer.v1'];
+
+const DEFAULT_WIDGETS = ['paycheck', 'safe', 'metrics', 'bills', 'budgets', 'recent'];
 
 const empty = () => ({
   balance: null,
@@ -14,30 +17,45 @@ const empty = () => ({
     { id: 'essentials', name: 'Essentials', limit: 200, color: '#0B1F3A' },
     { id: 'lifestyle', name: 'Lifestyle', limit: 120, color: '#1E40AF' },
     { id: 'savings', name: 'Savings', limit: 100, color: '#D4A853' }
-  ]
+  ],
+  settings: {
+    displayName: '',
+    paydayDay: null,
+    hideBalance: false,
+    homeWidgets: [...DEFAULT_WIDGETS],
+  },
 });
 
 function normalize(state) {
   let changed = false;
-  const next = { ...state };
+  const next = { ...empty(), ...state };
+  if (!next.settings) {
+    next.settings = empty().settings;
+    changed = true;
+  }
+  next.settings = { ...empty().settings, ...next.settings };
   next.subscriptions = (next.subscriptions || []).map((sub) => {
     const catalogId = migrateCatalogId(sub.catalogId);
-    if (catalogId !== sub.catalogId) changed = true;
-    return catalogId === sub.catalogId ? sub : { ...sub, catalogId };
+    const patch = catalogId !== sub.catalogId ? { catalogId } : {};
+    return Object.keys(patch).length ? { ...sub, ...patch } : sub;
   });
-  if (changed) write(next);
+  if (changed || next.subscriptions.some((s, i) => s !== state.subscriptions?.[i])) {
+    write(next);
+  }
   return next;
 }
 
 function read() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return normalize({ ...empty(), ...JSON.parse(raw) });
-    const legacy = localStorage.getItem(LEGACY);
-    if (legacy) {
-      const migrated = normalize({ ...empty(), ...JSON.parse(legacy) });
-      write(migrated);
-      return migrated;
+    if (raw) return normalize(JSON.parse(raw));
+    for (const legacyKey of LEGACY_KEYS) {
+      const legacy = localStorage.getItem(legacyKey);
+      if (legacy) {
+        const migrated = normalize(JSON.parse(legacy));
+        write(migrated);
+        return migrated;
+      }
     }
     return empty();
   } catch {
@@ -58,9 +76,37 @@ export const Store = {
   get: () => read(),
 
   reset() {
+    LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
     localStorage.removeItem(KEY);
-    localStorage.removeItem(LEGACY);
     return write(empty());
+  },
+
+  updateSettings(patch) {
+    const s = read();
+    s.settings = { ...s.settings, ...patch };
+    return write(s);
+  },
+
+  setCurrency(currency) {
+    const s = read();
+    s.currency = currency;
+    s.subscriptions = s.subscriptions.map((x) => ({ ...x, currency }));
+    return write(s);
+  },
+
+  updateBudget(id, patch) {
+    const s = read();
+    s.budgets = s.budgets.map((b) => (b.id === id ? { ...b, ...patch } : b));
+    return write(s);
+  },
+
+  exportData() {
+    return JSON.stringify(read(), null, 2);
+  },
+
+  importData(json) {
+    const parsed = JSON.parse(json);
+    return write(normalize(parsed));
   },
 
   setBalance(amount) {
@@ -135,8 +181,10 @@ export const Store = {
       why: entry.why || '',
       when: entry.when || '',
       how: entry.how || '',
+      billingAnchor: entry.billingAnchor || '',
+      billingDay: entry.billingDay || null,
       tip: entry.tip || '',
-      addedAt: isoToday()
+      addedAt: isoToday(),
     });
     return write(s);
   },
@@ -177,6 +225,19 @@ export const Store = {
 
   subsMonthly() {
     return read().subscriptions.reduce((sum, x) => sum + Number(x.price || 0), 0);
+  },
+
+  paydayIn() {
+    return daysUntilPayday(read().settings?.paydayDay);
+  },
+
+  billsBeforePayday() {
+    const s = read();
+    return billsBeforePayday(s.subscriptions, s.settings?.paydayDay);
+  },
+
+  billsBeforePaydayTotal() {
+    return this.billsBeforePayday().reduce((sum, x) => sum + Number(x.price || 0), 0);
   },
 
   upcomingBills(days = 30) {

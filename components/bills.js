@@ -12,6 +12,7 @@ import {
   parseCatalogKey,
 } from '../catalog.js';
 import { esc, money, niceDate, daysUntil, toast, initials, addDaysISO, $ } from './ui.js';
+import { anchorLabel, anchorHint, projectNextBill, projectCancelBy } from '../billing.js';
 
 const BROWSE_KEY = 'financer.browse.full';
 
@@ -226,6 +227,7 @@ export function renderCatalog(root, ctx, catalogId) {
       <section class="info-cards compact">
         ${product.why ? `<article><h3>Why</h3><p>${esc(product.why)}</p></article>` : ''}
         ${product.when ? `<article><h3>When billed</h3><p>${esc(product.when)}</p></article>` : ''}
+        ${product.billingAnchor ? `<article class="gold"><h3>Billing timing</h3><p><strong>${esc(anchorLabel(product.billingAnchor))}</strong>${product.billingSource ? ` — ${esc(product.billingSource)}` : ''}</p></article>` : ''}
       </section>
 
       <section class="panel">
@@ -272,6 +274,14 @@ export function renderCatalog(root, ctx, catalogId) {
   const entry = getCatalogEntry(catalogId);
   if (!entry) return root.innerHTML = '<p class="empty-sm">Plan not found.</p>';
   const owned = s.subscriptions.find((x) => x.catalogId === entry.catalogId);
+  const needsBillingDay = entry.billingAnchor === 'signup_anniversary' || entry.billingAnchor === 'app_store';
+  const defaultDay = new Date().getDate();
+  const defaultNext = needsBillingDay
+    ? projectNextBill({ billingAnchor: entry.billingAnchor, billingDay: defaultDay })
+    : addDaysISO(14);
+  const defaultCancel = needsBillingDay && defaultNext
+    ? projectCancelBy(defaultNext)
+    : addDaysISO(13);
 
   root.innerHTML = `
     <header class="detail-top">
@@ -287,6 +297,7 @@ export function renderCatalog(root, ctx, catalogId) {
       ${entry.why ? `<article><h3>Why</h3><p>${esc(entry.why)}</p></article>` : ''}
       ${entry.when ? `<article><h3>When to use</h3><p>${esc(entry.when)}</p></article>` : ''}
       ${entry.how ? `<article><h3>How to manage</h3><p>${esc(entry.how)}</p></article>` : ''}
+      ${entry.billingAnchor ? `<article class="gold"><h3>Billing timing</h3><p><strong>${esc(anchorLabel(entry.billingAnchor))}</strong></p><p>${esc(anchorHint(entry.billingAnchor) || '')}</p>${entry.billingSource ? `<p class="tiny">Source: ${esc(entry.billingSource)}</p>` : ''}</article>` : ''}
     </section>
 
     <div class="link-row">
@@ -301,8 +312,11 @@ export function renderCatalog(root, ctx, catalogId) {
         <h2>Track in Financer</h2>
         <form id="add" class="form-stack">
           <label class="field"><span>Your price</span><input name="price" type="number" min="0" step="0.01" value="${entry.price || 0}" required /></label>
-          <label class="field"><span>Next bill</span><input name="nextBill" type="date" value="${addDaysISO(14)}" required /></label>
-          <label class="field"><span>Cancel by</span><input name="cancelBy" type="date" value="${addDaysISO(13)}" required /></label>
+          ${needsBillingDay ? `
+            <label class="field"><span>Your billing day (1–31)</span><input name="billingDay" id="billingDay" type="number" min="1" max="31" value="${defaultDay}" required /></label>
+          ` : ''}
+          <label class="field"><span>Next bill</span><input name="nextBill" id="nextBill" type="date" value="${defaultNext || addDaysISO(14)}" required /></label>
+          <label class="field"><span>Cancel by</span><input name="cancelBy" id="cancelBy" type="date" value="${defaultCancel || addDaysISO(13)}" required /></label>
           <button class="btn primary block" type="submit">Add subscription</button>
         </form>
       </section>
@@ -311,6 +325,19 @@ export function renderCatalog(root, ctx, catalogId) {
 
   root.querySelector('[data-back]')?.addEventListener('click', () => ctx.back());
   root.querySelector('[data-owned]')?.addEventListener('click', () => ctx.openSub(owned.id));
+
+  const billingDayEl = $('#billingDay', root);
+  const nextBillEl = $('#nextBill', root);
+  const cancelByEl = $('#cancelBy', root);
+  const recalcDates = () => {
+    if (!needsBillingDay || !billingDayEl) return;
+    const day = Number(billingDayEl.value);
+    if (!day) return;
+    const next = projectNextBill({ billingAnchor: entry.billingAnchor, billingDay: day });
+    if (next && nextBillEl) nextBillEl.value = next;
+    if (next && cancelByEl) cancelByEl.value = projectCancelBy(next) || cancelByEl.value;
+  };
+  billingDayEl?.addEventListener('input', recalcDates);
 
   $('#add', root)?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -328,6 +355,8 @@ export function renderCatalog(root, ctx, catalogId) {
       why: entry.why || '',
       when: entry.when || '',
       how: entry.how || '',
+      billingAnchor: entry.billingAnchor || '',
+      billingDay: fd.get('billingDay') ? Number(fd.get('billingDay')) : null,
     });
     toast('Added');
     ctx.navigate('bills');
