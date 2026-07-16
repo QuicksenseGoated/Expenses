@@ -1,4 +1,4 @@
-const VERSION = 'financer-v12';
+const VERSION = 'financer-v13';
 const LEGACY_CACHES = [
   'sense-desk-v3.3',
   'sense-desk-v3',
@@ -34,7 +34,8 @@ const PRECACHE = [
   './components/bills.js',
   './components/activity.js',
   './components/calendar.js',
-  './components/profile.js',
+  './components/brand.js',
+  './components/onboarding.js',
   './components/install.js',
   './components/tab-icons.js'
 ];

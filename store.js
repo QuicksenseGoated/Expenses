@@ -26,14 +26,17 @@ const empty = () => ({
   subscriptions: [],
   budgets: [
     { id: 'essentials', name: 'Essentials', limit: 200, color: '#0B1F3A' },
+    { id: 'food', name: 'Food', limit: 150, color: '#059669' },
     { id: 'lifestyle', name: 'Lifestyle', limit: 120, color: '#1E40AF' },
-    { id: 'savings', name: 'Savings', limit: 100, color: '#D4A853' }
+    { id: 'transport', name: 'Transport', limit: 80, color: '#7c3aed' },
+    { id: 'savings', name: 'Savings', limit: 100, color: '#D4A853' },
   ],
   settings: {
     displayName: '',
     paydayDay: null,
     hideBalance: false,
     theme: 'light',
+    onboarded: false,
     homeWidgets: [...DEFAULT_WIDGETS],
   },
 });

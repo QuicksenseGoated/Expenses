@@ -67,6 +67,16 @@ export function getPlan(productId, planId) {
   return p.plans.find((pl) => pl.id === planId) || null;
 }
 
+function logoUrlFromSite(url) {
+  if (!url) return null;
+  try {
+    const domain = new URL(url).hostname.replace(/^www\./, '');
+    return `https://logo.clearbit.com/${domain}`;
+  } catch {
+    return null;
+  }
+}
+
 export function getCatalogEntry(catalogId) {
   const { productId, planId } = parseCatalogKey(migrateCatalogId(catalogId));
   const product = getProduct(productId);
@@ -84,6 +94,7 @@ export function getCatalogEntry(catalogId) {
     icon: product.icon,
     color: product.color,
     url: product.url,
+    logoUrl: logoUrlFromSite(product.url),
     pricingUrl: product.pricingUrl || product.url,
     why: product.why,
     when: product.when,
@@ -204,16 +215,17 @@ export function planRangeLabel(product, currency = '$') {
 /** Brand icon/color for a tracked subscription. */
 export function getSubBranding(sub) {
   const entry = getCatalogEntry(sub.catalogId);
+  const url = entry?.url || sub.url || '';
   if (entry?.icon) {
-    return { icon: entry.icon, color: entry.color || '#1e40af' };
+    return { icon: entry.icon, color: entry.color || '#1e40af', url };
   }
   if (String(sub.catalogId || '').startsWith('custom:')) {
-    return { icon: '📌', color: '#64748b' };
+    return { icon: '📌', color: '#64748b', url };
   }
   const { productId } = parseCatalogKey(sub.catalogId);
   const product = getProduct(productId);
-  if (product) return { icon: product.icon, color: product.color || '#1e40af' };
-  return { icon: '📦', color: '#1e40af' };
+  if (product) return { icon: product.icon, color: product.color || '#1e40af', url: product.url || '' };
+  return { icon: '📦', color: '#1e40af', url };
 }
 
 export const PRODUCT_COUNT = PRODUCTS.length;

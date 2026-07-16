@@ -5,6 +5,7 @@ import { TAB_ICONS } from './tab-icons.js';
 const SECTIONS = [
   { id: 'paycheck', label: 'Paycheck radar', desc: 'Bills before payday' },
   { id: 'subs_audit', label: 'Sub load', desc: 'Cost vs balance' },
+  { id: 'budgets', label: 'Budgets', desc: 'Monthly category limits' },
 ];
 
 const WIDGET_META = {
@@ -13,6 +14,7 @@ const WIDGET_META = {
   bills: { render: renderBills },
   recent: { render: renderRecent },
   subs_audit: { render: renderSubsAudit },
+  budgets: { render: renderBudgets },
 };
 
 const CORE = ['metrics', 'bills', 'recent'];
@@ -246,6 +248,28 @@ function renderSubsAudit(slot, ctx, s) {
     </section>`;
 }
 
+function renderBudgets(slot, ctx, s) {
+  const rows = Store.budgetBurn();
+  slot.innerHTML = `
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Budgets</h2>
+        <span class="pill">This month</span>
+      </div>
+      <div class="envelope-list">
+        ${rows.map((b) => `
+          <div class="envelope">
+            <div class="env-head">
+              <span>${esc(b.name)}</span>
+              <span>${money(b.used, s.currency)} / ${money(b.limit, s.currency)}</span>
+            </div>
+            <div class="env-bar"><i style="width:${b.pct}%;background:${esc(b.color)}"></i></div>
+          </div>
+        `).join('')}
+      </div>
+    </section>`;
+}
+
 async function openBalanceSheet(ctx, current = '') {
   const result = await sheet({
     title: 'Account balance',
@@ -292,10 +316,11 @@ export async function openSpendSheet(ctx) {
       <label class="field"><span>Category</span>
         <select id="cat">
           <option>Essentials</option>
-          <option>Lifestyle</option>
           <option>Food</option>
+          <option>Lifestyle</option>
           <option>Transport</option>
           <option>Shopping</option>
+          <option>Savings</option>
           <option>General</option>
         </select>
       </label>

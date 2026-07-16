@@ -13,6 +13,7 @@ import {
   parseCatalogKey,
 } from '../catalog.js';
 import { esc, money, niceDate, daysUntil, toast, addDaysISO, $, sheet, confirmSheet } from './ui.js';
+import { brandBadgeHtml, wireBrandBadges } from './brand.js';
 import { anchorLabel, anchorHint, projectNextBill, projectCancelBy } from '../billing.js';
 
 const FEATURED = ['streamladder', 'netflix', 'spotify', 'claude', 'youtube_premium', 'disney'];
@@ -87,9 +88,10 @@ export function renderBills(root, ctx) {
   const productRow = (p) => {
     const owned = ownedForProduct(p.id);
     const catLabel = CATEGORIES.find((c) => c.id === p.category)?.label || p.category;
+    const brand = { icon: p.icon, color: p.color, url: p.url };
     return `
       <button type="button" class="discover-row" data-pid="${p.id}">
-        <div class="brand-badge" style="background:${esc(p.color || '#1e40af')}">${p.icon}</div>
+        ${brandBadgeHtml(brand)}
         <div class="discover-main">
           <strong>${esc(p.name)}</strong>
           <span>${esc(catLabel)} · ${esc(planRangeLabel(p, s.currency))}</span>
@@ -195,6 +197,7 @@ export function renderBills(root, ctx) {
   });
 
   paint();
+  wireBrandBadges(root);
 }
 
 function card(sub, currency) {
@@ -206,7 +209,7 @@ function card(sub, currency) {
   return `
     <button type="button" class="sub-card ${urgent ? 'urgent' : ''}" data-sub="${sub.id}" style="--sub-accent:${esc(brand.color)}">
       <div class="sub-card-top">
-        <div class="brand-badge" style="background:${esc(brand.color)}">${brand.icon}</div>
+        ${brandBadgeHtml(brand)}
         <div>
           <strong>${esc(label)}</strong>
           <span>${esc(sub.category)}${sub.cycle === 'yearly' ? ' · yearly' : ''}</span>
@@ -334,10 +337,9 @@ export function renderCatalog(root, ctx, catalogId) {
         else ctx.openCatalog(key);
       });
     });
+    wireBrandBadges(root);
     return;
   }
-
-  const entry = getCatalogEntry(catalogId);
   if (!entry) return root.innerHTML = '<p class="empty-sm">Plan not found.</p>';
   const owned = s.subscriptions.find((x) => x.catalogId === entry.catalogId);
   const needsBillingDay = entry.billingAnchor === 'signup_anniversary' || entry.billingAnchor === 'app_store';
@@ -352,7 +354,7 @@ export function renderCatalog(root, ctx, catalogId) {
   root.innerHTML = `
     <header class="detail-top">
       <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
-      <div class="brand-badge lg" style="background:${esc(product.color || '#1e40af')}">${product.icon}</div>
+      ${brandBadgeHtml({ icon: product.icon, color: product.color, url: product.url }, { lg: true })}
       <div>
         <h1>${esc(entry.displayName)}</h1>
         <p>${esc(catLabel)} · ${esc(priceLabel(entry.price, entry.cycle, s.currency))}</p>
@@ -427,6 +429,7 @@ export function renderCatalog(root, ctx, catalogId) {
     toast('Added');
     ctx.navigate('bills');
   });
+  wireBrandBadges(root);
 }
 
 export function renderSubDetail(root, ctx, id) {
@@ -441,7 +444,7 @@ export function renderSubDetail(root, ctx, id) {
   root.innerHTML = `
     <header class="detail-top">
       <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
-      <div class="brand-badge lg" style="background:${esc(brand.color)}">${brand.icon}</div>
+      ${brandBadgeHtml(brand, { lg: true })}
       <div>
         <h1>${esc(label)}</h1>
         <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
@@ -513,4 +516,5 @@ export function renderSubDetail(root, ctx, id) {
     toast('Removed');
     ctx.navigate('bills');
   });
+  wireBrandBadges(root);
 }

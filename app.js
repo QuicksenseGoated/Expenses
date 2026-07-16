@@ -5,6 +5,7 @@ import { renderActivity } from './components/activity.js';
 import { renderCalendar } from './components/calendar.js';
 import { renderProfile } from './components/profile.js';
 import { initInstallPrompt } from './components/install.js';
+import { maybeOnboarding } from './components/onboarding.js';
 import { TAB_ICONS } from './components/tab-icons.js';
 import { applyTheme } from './components/ui.js';
 
@@ -73,6 +74,7 @@ function boot() {
   shell();
   paint();
   initInstallPrompt();
+  maybeOnboarding(ctx);
 }
 
 function shell() {

@@ -7,6 +7,7 @@ export function renderActivity(root, ctx) {
   const txs = s.transactions;
   const monthSpend = Store.monthSpend();
   const grouped = groupByDate(txs);
+  const byCategory = categorySpend(s);
 
   root.innerHTML = `
     <header class="page-title">
@@ -21,6 +22,23 @@ export function renderActivity(root, ctx) {
 
     ${s.balance == null ? `
       <section class="banner">Set your balance on Home before logging spends.</section>
+    ` : ''}
+
+    ${byCategory.length ? `
+      <section class="panel flush-top">
+        <h2>By category</h2>
+        <div class="cat-bars">
+          ${byCategory.map((c) => `
+            <div class="cat-bar-row">
+              <div class="cat-bar-head">
+                <span>${esc(c.name)}</span>
+                <b>${money(c.total, s.currency)}</b>
+              </div>
+              <div class="env-bar"><i style="width:${c.pct}%"></i></div>
+            </div>
+          `).join('')}
+        </div>
+      </section>
     ` : ''}
 
     ${txs.length ? Object.entries(grouped).map(([date, rows]) => `
@@ -70,4 +88,18 @@ function groupByDate(txs) {
     (acc[t.date] ||= []).push(t);
     return acc;
   }, {});
+}
+
+function categorySpend(s) {
+  const m = new Date().toISOString().slice(0, 7);
+  const map = new Map();
+  for (const t of s.transactions) {
+    if (t.type !== 'spend' || !t.date.startsWith(m)) continue;
+    map.set(t.category, (map.get(t.category) || 0) + t.amount);
+  }
+  const rows = [...map.entries()].map(([name, total]) => ({ name, total }));
+  const max = Math.max(...rows.map((r) => r.total), 1);
+  return rows
+    .sort((a, b) => b.total - a.total)
+    .map((r) => ({ ...r, pct: Math.round((r.total / max) * 100) }));
 }
