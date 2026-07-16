@@ -1256,12 +1256,13 @@ a { color: var(--royal); }
 .sub-head-text h1 {
   margin: 0;
   font-family: var(--serif);
-  font-size: 1.35rem;
+  font-size: 1.28rem;
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sub-head-text p {
@@ -1280,13 +1281,106 @@ a { color: var(--royal); }
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 14px;
-  padding: 18px 16px;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 16px;
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--line-strong);
   box-shadow: var(--shadow);
+  min-height: 0;
+}
+
+.sub-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--elevated);
+  border: 1px solid var(--line);
+}
+
+.sub-hero strong {
+  font-family: var(--serif);
+  font-size: 2.4rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.sub-hero span {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.sub-hero.trial {
+  background: linear-gradient(135deg, var(--gold-soft), var(--surface));
+  border-color: color-mix(in srgb, var(--gold) 40%, var(--line));
+}
+
+.sub-hero.trial strong { color: #b45309; }
+
+.sub-hero.urgent {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+}
+
+.sub-hero.urgent strong { color: var(--danger); }
+
+.sub-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.sub-stat {
+  display: grid;
+  gap: 2px;
+  padding: 10px 8px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  background: var(--elevated);
+  border: 1px solid var(--line);
+}
+
+.sub-stat span {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.sub-stat strong {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.sub-stack-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.sub-stack-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent, var(--royal)) 70%, var(--royal)), var(--accent, var(--royal)));
+}
+
+.sub-blurb {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
 }
 
 .sub-card.on-trial {
@@ -1395,22 +1489,66 @@ a { color: var(--royal); }
   border-color: color-mix(in srgb, var(--danger) 30%, var(--line));
 }
 
-.sub-meta {
-  margin: 0;
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--muted);
-  line-height: 1.4;
+.sub-tip {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #eff6ff, var(--surface));
+  border: 1px solid #bfdbfe;
 }
 
-.sub-link {
-  display: block;
-  text-align: center;
+.sub-tip span {
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sub-tip p {
+  margin: 0;
   font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.sub-save {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  color: #166534;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+}
+
+.sub-price-change {
+  margin: 0;
+  font-size: 0.78rem;
   font-weight: 600;
+  text-align: center;
+  color: var(--muted);
+}
+
+.sub-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sub-foot a {
   color: var(--royal);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .sub-actions {

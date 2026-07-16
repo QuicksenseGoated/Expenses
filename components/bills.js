@@ -234,6 +234,43 @@ function subStatusNote(life, sub, currency) {
   return '';
 }
 
+function subHeroMeta(life) {
+  if (life.onTrial && life.trialDaysLeft != null) {
+    const n = life.trialDaysLeft;
+    return {
+      num: n,
+      label: n === 1 ? 'day left on trial' : 'days left on trial',
+      tone: life.urgentTrial ? 'urgent' : 'trial',
+    };
+  }
+  if (!life.onTrial && life.daysUntilCharge != null) {
+    const n = life.daysUntilCharge;
+    return {
+      num: n,
+      label: n === 1 ? 'day until renewal' : 'days until renewal',
+      tone: life.urgentCharge ? 'urgent' : '',
+    };
+  }
+  return null;
+}
+
+function annualSavingsHint(entry, sub, currency) {
+  if (sub.cycle === 'yearly' || !entry?.productId || !entry?.planId) return '';
+  const product = getProduct(entry.productId);
+  if (!product?.plans?.length) return '';
+  const annual = product.plans.find((p) => p.id === `${entry.planId}_annual`)
+    || product.plans.find((p) => {
+      if (p.cycle !== 'yearly') return false;
+      const base = (entry.planName || '').replace(/\s*\(annual\)/i, '').trim().toLowerCase();
+      return p.name.replace(/\s*\(annual\)/i, '').trim().toLowerCase() === base;
+    });
+  if (!annual) return '';
+  const monthlyYr = monthlyEquivalent(sub.price, sub.cycle) * 12;
+  if (annual.price >= monthlyYr * 0.98) return '';
+  const save = Math.round((1 - annual.price / monthlyYr) * 100);
+  return `Annual saves ~${save}% — ${money(annual.price, currency)}/yr`;
+}
+
 function subDetailPanelHtml(sub, life, entry, currency) {
   const monthly = monthlyEquivalent(sub.price, sub.cycle);
   const yearly = monthly * 12;
@@ -242,6 +279,12 @@ function subDetailPanelHtml(sub, life, entry, currency) {
   const progress = life.onTrial ? trialProgress(sub) : null;
   const note = subStatusNote(life, sub, currency);
   const urgent = life.urgentTrial || life.urgentCancel || life.urgentCharge;
+  const hero = subHeroMeta(life);
+  const saveHint = annualSavingsHint(entry, sub, currency);
+  const valueTip = entry?.valueTip || '';
+  const blurb = entry?.why || entry?.blurb || '';
+  const priceBumped = sub.priceHistory?.[0];
+  const trackedSince = sub.startedAt || sub.addedAt;
 
   const dates = [];
   if (life.onTrial && sub.trialEnds) {
@@ -260,21 +303,51 @@ function subDetailPanelHtml(sub, life, entry, currency) {
     mark: life.urgentCharge && !life.onTrial ? 'urgent' : 'charge',
   });
 
-  const meta = [
-    sub.category || entry?.category,
-    `${money(yearly, currency)}/yr`,
-    stackShare ? `${stackShare}% of stack` : null,
-    life.onTrial ? 'On trial' : null,
-  ].filter(Boolean).join(' · ');
+  const footBits = [
+    life.onTrial ? 'On trial' : 'Active',
+    trackedSince ? `Since ${niceDate(trackedSince)}` : null,
+    sub.category || entry?.category || null,
+  ].filter(Boolean);
 
   return `
     <section class="sub-card ${life.onTrial ? 'on-trial' : ''} ${urgent ? 'urgent' : ''}">
+      ${hero ? `
+        <div class="sub-hero ${hero.tone}">
+          <strong>${hero.num}</strong>
+          <span>${hero.label}</span>
+        </div>
+      ` : ''}
+
+      <div class="sub-stats">
+        <div class="sub-stat">
+          <span>Monthly</span>
+          <strong>${money(monthly, currency)}</strong>
+        </div>
+        <div class="sub-stat">
+          <span>Yearly est.</span>
+          <strong>${money(yearly, currency)}</strong>
+        </div>
+        <div class="sub-stat">
+          <span>Your stack</span>
+          <strong>${stackShare || 0}%</strong>
+        </div>
+      </div>
+
+      ${stackTotal > 0 ? `
+        <div class="sub-stack-bar" aria-hidden="true">
+          <i style="width:${Math.max(4, stackShare)}%"></i>
+        </div>
+      ` : ''}
+
+      ${blurb ? `<p class="sub-blurb">${esc(blurb)}</p>` : ''}
+
       ${progress ? `
         <div class="sub-trial">
           <div class="sub-trial-track"><i style="width:${progress.pct}%"></i></div>
-          <span>Day ${progress.day} of ${progress.total} · ${life.trialDaysLeft}d left</span>
+          <span>Day ${progress.day} of ${progress.total}</span>
         </div>
       ` : ''}
+
       <div class="sub-dates cols-${dates.length}">
         ${dates.map((d) => `
           <div class="sub-date ${d.mark}">
@@ -284,10 +357,20 @@ function subDetailPanelHtml(sub, life, entry, currency) {
           </div>
         `).join('')}
       </div>
+
       ${note ? `<p class="sub-note ${urgent ? 'urgent' : ''}">${note}</p>` : ''}
+
+      ${valueTip ? `<div class="sub-tip"><span aria-hidden="true">💡</span><p>${esc(valueTip)}</p></div>` : ''}
+
+      ${saveHint ? `<p class="sub-save">${esc(saveHint)}</p>` : ''}
+
+      ${priceBumped ? `<p class="sub-price-change">Price changed ${niceDate(priceBumped.date)} · was ${money(priceBumped.price, currency)}</p>` : ''}
+
+      <div class="sub-foot">
+        <span>${esc(footBits.join(' · '))}</span>
+        ${sub.trialSource ? `<a href="${esc(sub.trialSource)}" target="_blank" rel="noopener">Trial policy ↗</a>` : ''}
+      </div>
     </section>
-    ${meta ? `<p class="sub-meta">${esc(meta)}</p>` : ''}
-    ${sub.trialSource ? `<a class="sub-link" href="${esc(sub.trialSource)}" target="_blank" rel="noopener">Trial policy ↗</a>` : ''}
   `;
 }
 
