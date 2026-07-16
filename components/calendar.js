@@ -1,11 +1,16 @@
 import { Store } from '../store.js';
-import { getSubBranding } from '../catalog.js';
+import { getSubBranding, getCatalogEntry } from '../catalog.js';
 import { brandBadgeHtml, wireBrandBadges } from './brand.js';
 import { money, niceDate, esc, sheet } from './ui.js';
 
 let viewMonth = new Date().getMonth();
 let viewYear = new Date().getFullYear();
 let calView = localStorage.getItem('financer.calView') || 'grid';
+
+function subShortLabel(sub) {
+  const entry = getCatalogEntry(sub.catalogId);
+  return entry?.name || sub.name;
+}
 
 function monthLabel(year, month) {
   return new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -108,7 +113,7 @@ function renderTimeline(data, s) {
               return `
                 <button type="button" class="cal-charge" data-sub="${b.id}">
                   ${brandBadgeHtml(brand)}
-                  <span>${esc(b.name)}</span>
+                  <span>${esc(subShortLabel(b))}</span>
                   <b>${money(b.price, b.currency)}</b>
                 </button>`;
             }).join('')}
@@ -132,7 +137,7 @@ async function openDaySheet(ctx, iso) {
       <button type="button" class="day-event ${m.type}" data-sub="${m.sub.id}">
         ${brandBadgeHtml(brand)}
         <div>
-          <strong>${esc(m.sub.name)}</strong>
+          <strong>${esc(subShortLabel(m.sub))}</strong>
           <span>${typeLabel}</span>
         </div>
       </button>`;
@@ -144,7 +149,7 @@ async function openDaySheet(ctx, iso) {
       <button type="button" class="day-event charge" data-sub="${b.id}">
         ${brandBadgeHtml(brand)}
         <div>
-          <strong>${esc(b.name)}</strong>
+          <strong>${esc(subShortLabel(b))}</strong>
           <span>${b.onTrial ? 'First charge after trial' : 'Renewal'}</span>
         </div>
         <b>${money(b.price, b.currency)}</b>
@@ -231,7 +236,7 @@ export function renderCalendar(root, ctx) {
           ${cancelSoon.map((b) => `
             <button type="button" class="alert-row" data-sub="${b.id}">
               <div>
-                <strong>${esc(b.name)}</strong>
+                <strong>${esc(subShortLabel(b))}</strong>
                 <span>Cancel by ${niceDate(b.cancelBy)} · ${b.daysUntilCancel}d left</span>
               </div>
               <b>${money(b.price, b.currency)}</b>
