@@ -2234,8 +2234,6 @@ a { color: var(--royal); }
   box-shadow: 0 0 0 1px var(--royal);
 }
 
-.cal-grid-wrap { padding: 4px 0; }
-
 .cal-grid {
   max-width: 100%;
 }
@@ -2491,6 +2489,7 @@ button.envelope {
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-width: 0;
   padding: 12px;
   border-radius: var(--radius-sm);
   border: 1px solid #fde68a;
@@ -2498,7 +2497,18 @@ button.envelope {
   text-align: left;
 }
 
-.alert-row strong { display: block; font-size: 0.9rem; }
+.alert-row > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.alert-row strong {
+  display: block;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .alert-row span { font-size: 0.78rem; color: var(--muted); }
 
 /* Home customize */
