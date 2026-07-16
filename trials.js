@@ -77,32 +77,22 @@ export function trialResearchHtml(entry, cycle) {
   const policy = entry?.trialPolicy;
 
   if (trial && (trial.cycles || ['monthly']).includes(cycle)) {
-    const cycleLabel = (trial.cycles || ['monthly']).join(', ');
     return `
-      <div class="trial-research verified">
-        <div class="trial-research-head">
-          <strong>Researched free trial</strong>
-          <span class="pill gold">${trial.days}-day · ${cycleLabel}</span>
-        </div>
-        <p>${trial.note || `${trial.days}-day trial on ${cycleLabel} billing.`}</p>
-        ${trial.source ? `<a class="trial-source" href="${escAttr(trial.source)}" target="_blank" rel="noopener">Verify on official site ↗</a>` : ''}
+      <div class="trial-chip verified">
+        <span class="pill gold">${trial.days}-day trial</span>
+        ${trial.source ? `<a class="trial-source" href="${escAttr(trial.source)}" target="_blank" rel="noopener">Verify ↗</a>` : ''}
       </div>`;
   }
 
   if (policy?.status === 'none') {
     return `
-      <div class="trial-research none">
-        <strong>No documented free trial</strong>
-        <p>${policy.note || 'This product has no verified free trial in our catalog.'}</p>
-        ${policy.source ? `<a class="trial-source" href="${escAttr(policy.source)}" target="_blank" rel="noopener">Official policy ↗</a>` : ''}
+      <div class="trial-chip none">
+        <span>No free trial</span>
+        ${policy.source ? `<a class="trial-source" href="${escAttr(policy.source)}" target="_blank" rel="noopener">Policy ↗</a>` : ''}
       </div>`;
   }
 
-  return `
-    <div class="trial-research unknown">
-      <strong>No trial data researched</strong>
-      <p>We have not verified a free trial for this plan. Set your dates manually below.</p>
-    </div>`;
+  return '';
 }
 
 function escAttr(s = '') {

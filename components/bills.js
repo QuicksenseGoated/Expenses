@@ -14,7 +14,7 @@ import {
 } from '../catalog.js';
 import { esc, money, niceDate, daysUntil, toast, addDaysISO, $, sheet, confirmSheet } from './ui.js';
 import { brandBadgeHtml, wireBrandBadges } from './brand.js';
-import { anchorLabel, anchorHint, projectNextBill, projectCancelBy } from '../billing.js';
+import { projectNextBill, projectCancelBy } from '../billing.js';
 import { checkReminders } from './notifications.js';
 import {
   trialApplies,
@@ -210,6 +210,38 @@ export function renderBills(root, ctx) {
   paint();
 }
 
+function dateStripHtml(sub, life) {
+  const cells = [];
+  if (life.onTrial) {
+    cells.push({ label: 'Trial', date: sub.trialEnds, days: life.trialDaysLeft, urgent: life.urgentTrial });
+  }
+  cells.push({
+    label: life.onTrial ? 'Charge' : 'Renews',
+    date: sub.nextBill,
+    days: life.daysUntilCharge,
+    urgent: !life.onTrial && life.urgentCharge,
+  });
+  cells.push({
+    label: 'Cancel',
+    date: sub.cancelBy,
+    days: life.daysUntilCancel,
+    urgent: life.urgentCancel,
+  });
+
+  const urgent = life.urgentTrial || life.urgentCharge || life.urgentCancel;
+  return `
+    <div class="date-strip ${life.onTrial ? 'on-trial' : ''} ${urgent ? 'urgent' : ''}">
+      ${cells.map((c) => `
+        <div class="date-cell ${c.urgent ? 'urgent' : ''}">
+          <span>${c.label}</span>
+          <b>${niceDate(c.date)}</b>
+          <em>${c.days}d</em>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function card(sub, currency) {
   const life = getSubLifecycle(sub);
   const entry = getCatalogEntry(sub.catalogId);
@@ -357,52 +389,44 @@ export function renderCatalog(root, ctx, catalogId) {
 
   if (!planId) {
     root.innerHTML = `
-      <header class="detail-top">
-        <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
-        ${brandBadgeHtml({ icon: product.icon, color: product.color, url: product.url }, { lg: true })}
-        <div>
-          <h1>${esc(product.name)}</h1>
-          <p>${esc(catLabel)} · ${esc(planRangeLabel(product, s.currency))}</p>
-        </div>
-      </header>
+      <div class="detail-view">
+        <header class="detail-top">
+          <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
+          ${brandBadgeHtml({ icon: product.icon, color: product.color, url: product.url }, { lg: true })}
+          <div>
+            <h1>${esc(product.name)}</h1>
+            <p>${esc(catLabel)} · ${esc(planRangeLabel(product, s.currency))}</p>
+          </div>
+        </header>
 
-      <section class="info-cards compact">
-        ${product.why ? `<article><h3>Why</h3><p>${esc(product.why)}</p></article>` : ''}
-        ${product.when ? `<article><h3>When billed</h3><p>${esc(product.when)}</p></article>` : ''}
-        ${product.billingAnchor ? `<article class="gold"><h3>Billing timing</h3><p><strong>${esc(anchorLabel(product.billingAnchor))}</strong>${product.billingSource ? ` — ${esc(product.billingSource)}` : ''}</p></article>` : ''}
-        ${product.valueTip ? `<article class="gold"><h3>Smart subscribe</h3><p>${esc(product.valueTip)}</p></article>` : ''}
-      </section>
+        ${product.valueTip ? `<p class="detail-hint">${esc(product.valueTip)}</p>` : ''}
+        ${product.trialPolicy ? trialResearchHtml({ trialPolicy: product.trialPolicy }, 'monthly') : ''}
 
-      ${product.trialPolicy ? trialResearchHtml({ trialPolicy: product.trialPolicy }, 'monthly') : ''}
-
-      <section class="panel">
-        <h2>Choose your plan</h2>
-        <p class="panel-sub">One product — pick the tier you actually pay for.</p>
         <div class="plan-picker">
           ${[...product.plans].sort((a, b) => a.price - b.price).map((plan) => {
             const key = catalogKey(product.id, plan.id);
             const owned = s.subscriptions.some((x) => x.catalogId === key);
+            const meta = [plan.blurb, plan.trial ? `${plan.trial.days}d trial` : ''].filter(Boolean).join(' · ');
             return `
               <button type="button" class="plan-card ${owned ? 'owned' : ''}" data-plan="${plan.id}">
                 <div class="plan-card-top">
                   <strong>${esc(plan.name)}</strong>
                   <span class="plan-price">${esc(priceLabel(plan.price, plan.cycle, s.currency))}</span>
                 </div>
-                ${plan.blurb ? `<p>${esc(plan.blurb)}</p>` : ''}
-                ${plan.trial ? `<span class="plan-trial-tag">${plan.trial.days}-day trial · ${(plan.trial.cycles || ['monthly']).join('/')}</span>` : ''}
-                <span class="tag ${owned ? 'owned' : ''}">${owned ? 'Tracking' : 'Select'}</span>
+                ${meta ? `<span class="plan-meta">${esc(meta)}</span>` : ''}
+                ${owned ? '<span class="tag owned">Tracking</span>' : ''}
               </button>
             `;
           }).join('')}
         </div>
-      </section>
 
-      ${product.pricingUrl || product.url ? `
-        <div class="link-row">
-          ${product.url ? `<a class="btn outline" href="${esc(product.url)}" target="_blank" rel="noopener">Website</a>` : ''}
-          ${product.pricingUrl ? `<a class="btn outline" href="${esc(product.pricingUrl)}" target="_blank" rel="noopener">Official pricing</a>` : ''}
-        </div>
-      ` : ''}
+        ${product.pricingUrl || product.url ? `
+          <div class="link-row compact">
+            ${product.url ? `<a class="text-link" href="${esc(product.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}
+            ${product.pricingUrl ? `<a class="text-link" href="${esc(product.pricingUrl)}" target="_blank" rel="noopener">Pricing ↗</a>` : ''}
+          </div>
+        ` : ''}
+      </div>
     `;
 
     root.querySelector('[data-back]')?.addEventListener('click', () => ctx.back());
@@ -431,56 +455,51 @@ export function renderCatalog(root, ctx, catalogId) {
     : addDaysISO(13);
 
   root.innerHTML = `
-    <header class="detail-top">
-      <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
-      ${brandBadgeHtml({ icon: product.icon, color: product.color, url: product.url }, { lg: true })}
-      <div>
-        <h1>${esc(entry.displayName)}</h1>
-        <p>${esc(catLabel)} · ${esc(priceLabel(entry.price, entry.cycle, s.currency))}</p>
+    <div class="detail-view">
+      <header class="detail-top">
+        <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
+        ${brandBadgeHtml({ icon: product.icon, color: product.color, url: product.url }, { lg: true })}
+        <div>
+          <h1>${esc(entry.displayName)}</h1>
+          <p>${esc(catLabel)} · ${esc(priceLabel(entry.price, entry.cycle, s.currency))}</p>
+        </div>
+      </header>
+
+      ${entry.valueTip ? `<p class="detail-hint">${esc(entry.valueTip)}</p>` : ''}
+      ${trialResearchHtml(entry, entry.cycle)}
+
+      <div class="link-row compact">
+        ${entry.url ? `<a class="text-link" href="${esc(entry.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}
+        ${entry.pricingUrl ? `<a class="text-link" href="${esc(entry.pricingUrl)}" target="_blank" rel="noopener">Pricing ↗</a>` : ''}
       </div>
-    </header>
 
-    <section class="info-cards">
-      ${entry.why ? `<article><h3>Why</h3><p>${esc(entry.why)}</p></article>` : ''}
-      ${entry.when ? `<article><h3>When to use</h3><p>${esc(entry.when)}</p></article>` : ''}
-      ${entry.how ? `<article><h3>How to manage</h3><p>${esc(entry.how)}</p></article>` : ''}
-      ${entry.billingAnchor ? `<article class="gold"><h3>Billing timing</h3><p><strong>${esc(anchorLabel(entry.billingAnchor))}</strong></p><p>${esc(anchorHint(entry.billingAnchor) || '')}</p>${entry.billingSource ? `<p class="tiny">Source: ${esc(entry.billingSource)}</p>` : ''}</article>` : ''}
-      ${entry.valueTip ? `<article class="gold"><h3>Smart subscribe</h3><p>${esc(entry.valueTip)}</p></article>` : ''}
-    </section>
-
-    <div class="link-row">
-      ${entry.url ? `<a class="btn outline" href="${esc(entry.url)}" target="_blank" rel="noopener">Website</a>` : ''}
-      ${entry.pricingUrl ? `<a class="btn outline" href="${esc(entry.pricingUrl)}" target="_blank" rel="noopener">Official pricing</a>` : ''}
-    </div>
-
-    ${owned ? `
-      <button type="button" class="btn primary block" data-owned>Open in your stack</button>
-    ` : `
-      <section class="panel">
-        <h2>Track in Financer</h2>
-        ${trialResearchHtml(entry, entry.cycle)}
-        <form id="add" class="form-stack">
+      ${owned ? `
+        <button type="button" class="btn primary block" data-owned>Open tracked sub</button>
+      ` : `
+        <form id="add" class="form-stack compact-form">
           ${trialApplies(entry) ? `
             <label class="field checkbox-row trial-confirm">
               <input type="checkbox" id="useTrial" name="useTrial" checked />
-              <span>Use researched trial — I'll verify this matches my signup</span>
+              <span>Apply trial (verify at signup)</span>
             </label>
-            <label class="field"><span>Started / signup date</span>
+            <label class="field"><span>Started</span>
               <input name="startedAt" id="startedAt" type="date" value="${isoToday()}" required />
             </label>
             <div id="trialPreview" class="trial-preview hidden"></div>
             <input type="hidden" name="trialEnds" id="trialEnds" />
           ` : ''}
-          <label class="field"><span>Your price (${entry.cycle})</span><input name="price" type="number" min="0" step="0.01" value="${entry.price || 0}" required /></label>
+          <label class="field"><span>Price</span><input name="price" type="number" min="0" step="0.01" value="${entry.price || 0}" required /></label>
           ${needsBillingDay ? `
-            <label class="field"><span>Your billing day (1–31)</span><input name="billingDay" id="billingDay" type="number" min="1" max="31" value="${defaultDay}" required /></label>
+            <label class="field"><span>Billing day</span><input name="billingDay" id="billingDay" type="number" min="1" max="31" value="${defaultDay}" required /></label>
           ` : ''}
-          <label class="field"><span>${trialApplies(entry) ? 'First charge' : 'Next bill'}</span><input name="nextBill" id="nextBill" type="date" value="${defaultNext || addDaysISO(14)}" required /></label>
-          <label class="field"><span>Cancel by</span><input name="cancelBy" id="cancelBy" type="date" value="${defaultCancel || addDaysISO(13)}" required /></label>
-          <button class="btn primary block" type="submit">Add subscription</button>
+          <div class="field-row">
+            <label class="field"><span>${trialApplies(entry) ? 'First charge' : 'Next bill'}</span><input name="nextBill" id="nextBill" type="date" value="${defaultNext || addDaysISO(14)}" required /></label>
+            <label class="field"><span>Cancel by</span><input name="cancelBy" id="cancelBy" type="date" value="${defaultCancel || addDaysISO(13)}" required /></label>
+          </div>
+          <button class="btn primary block" type="submit">Add to stack</button>
         </form>
-      </section>
-    `}
+      `}
+    </div>
   `;
 
   root.querySelector('[data-back]')?.addEventListener('click', () => ctx.back());
@@ -559,75 +578,49 @@ export function renderSubDetail(root, ctx, id) {
   const history = sub.priceHistory || [];
 
   root.innerHTML = `
-    <header class="detail-top">
-      <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
-      ${brandBadgeHtml(brand, { lg: true })}
-      <div>
-        <h1>${esc(label)}</h1>
-        <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
-      </div>
-    </header>
+    <div class="detail-view">
+      <header class="detail-top">
+        <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
+        ${brandBadgeHtml(brand, { lg: true })}
+        <div>
+          <h1>${esc(label)}</h1>
+          <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
+        </div>
+      </header>
 
-    <section class="sub-life-hero ${life.onTrial ? 'on-trial' : ''} ${life.urgentCharge || life.urgentCancel || life.urgentTrial ? 'urgent' : ''}">
-      ${life.onTrial ? `
-        <div class="life-block trial">
-          <span class="life-label">Trial ends</span>
-          <strong>${niceDate(sub.trialEnds)}</strong>
-          <em>${life.trialDaysLeft} days left — cancel before first charge</em>
+      ${dateStripHtml(sub, life)}
+
+      ${history.length ? `
+        <details class="detail-fold">
+          <summary>Price history</summary>
+          <div class="mini-history">
+            <span class="current">${money(sub.price, sub.currency)} now</span>
+            ${history.map((h) => `<span>${niceDate(h.date)} ${money(h.price, sub.currency)}</span>`).join('')}
+          </div>
+        </details>
+      ` : ''}
+
+      ${sub.url || sub.trialSource ? `
+        <div class="link-row compact">
+          ${sub.url ? `<a class="text-link" href="${esc(sub.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}
+          ${sub.trialSource ? `<a class="text-link" href="${esc(sub.trialSource)}" target="_blank" rel="noopener">Trial policy ↗</a>` : ''}
         </div>
       ` : ''}
-      <div class="life-block charge">
-        <span class="life-label">${life.onTrial ? 'First charge' : 'Renews'}</span>
-        <strong>${niceDate(sub.nextBill)}</strong>
-        <em>${life.daysUntilCharge} days · ${money(sub.price, sub.currency)}</em>
-      </div>
-      <div class="life-block cancel ${life.urgentCancel ? 'urgent' : ''}">
-        <span class="life-label">Cancel by</span>
-        <strong>${niceDate(sub.cancelBy)}</strong>
-        <em>${life.daysUntilCancel} days left to avoid charge</em>
-      </div>
-      ${sub.trialSource ? `<p class="life-source">Trial source: <a href="${esc(sub.trialSource)}" target="_blank" rel="noopener">official docs ↗</a></p>` : ''}
-    </section>
 
-    <section class="info-cards">
-      ${sub.why ? `<article><h3>Why</h3><p>${esc(sub.why)}</p></article>` : ''}
-      ${sub.when ? `<article><h3>When</h3><p>${esc(sub.when)}</p></article>` : ''}
-      ${sub.how ? `<article><h3>How</h3><p>${esc(sub.how)}</p></article>` : ''}
-    </section>
-
-    ${history.length ? `
-      <section class="panel">
-        <h2>Price history</h2>
-        <div class="price-history">
-          <div class="price-history-row current">
-            <span>Now</span>
-            <b>${money(sub.price, sub.currency)}</b>
+      <details class="detail-fold">
+        <summary>Edit</summary>
+        <form id="edit" class="form-stack compact-form">
+          <label class="field"><span>Price</span><input name="price" type="number" min="0" step="0.01" value="${sub.price}" required /></label>
+          <div class="field-row">
+            <label class="field"><span>Next bill</span><input name="nextBill" type="date" value="${sub.nextBill}" required /></label>
+            <label class="field"><span>Cancel by</span><input name="cancelBy" type="date" value="${sub.cancelBy}" required /></label>
           </div>
-          ${history.map((h) => `
-            <div class="price-history-row">
-              <span>${niceDate(h.date)}</span>
-              <b>${money(h.price, sub.currency)}</b>
-            </div>
-          `).join('')}
-        </div>
-      </section>
-    ` : ''}
-
-    <div class="link-row">
-      ${sub.url ? `<a class="btn outline" href="${esc(sub.url)}" target="_blank" rel="noopener">Website</a>` : ''}
+          <label class="field"><span>Trial ends</span><input name="trialEnds" type="date" value="${sub.trialEnds || ''}" /></label>
+          <button class="btn primary block" type="submit">Save</button>
+        </form>
+        <button type="button" class="btn danger block" data-rm>Remove</button>
+      </details>
     </div>
-
-    <section class="panel">
-      <h2>Edit</h2>
-      <form id="edit" class="form-stack">
-        <label class="field"><span>Price</span><input name="price" type="number" min="0" step="0.01" value="${sub.price}" required /></label>
-        <label class="field"><span>Next bill</span><input name="nextBill" type="date" value="${sub.nextBill}" required /></label>
-        <label class="field"><span>Cancel by</span><input name="cancelBy" type="date" value="${sub.cancelBy}" required /></label>
-        <label class="field"><span>Trial ends</span><input name="trialEnds" type="date" value="${sub.trialEnds || ''}" /></label>
-        <button class="btn primary block" type="submit">Save</button>
-      </form>
-      <button type="button" class="btn danger block" data-rm>Remove</button>
-    </section>
   `;
 
   root.querySelector('[data-back]')?.addEventListener('click', () => ctx.back());
