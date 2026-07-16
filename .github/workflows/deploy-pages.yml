@@ -1,0 +1,45 @@
+name: Deploy Sense Desk PWA
+
+on:
+  push:
+    branches:
+      - main
+      - cursor/detailed-content-planner-7ca7
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare public site
+        run: |
+          mkdir -p public
+          cp index.html styles.css app.js storage.js profile.js playbook.js sw.js manifest.webmanifest .nojekyll public/
+          cp -r components icons public/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

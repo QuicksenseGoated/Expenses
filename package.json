@@ -1,15 +1,15 @@
 {
-  "name": "cadence",
-  "productName": "Cadence",
-  "version": "1.0.0",
-  "description": "A results-driven content planner — strategy, briefs, calendar, pipeline, and performance tracking.",
+  "name": "sense-desk",
+  "productName": "Sense Desk",
+  "version": "2.0.0",
+  "description": "Quicksense social media manager PWA — weekly strategy, clip factory, growth plays, scoreboard.",
   "main": "main.js",
   "author": "Quicksense",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "serve": "npx --yes serve src -l 5173",
+    "serve": "npx --yes serve . -l 5173",
     "dist": "electron-builder",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
@@ -20,15 +20,24 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.quicksense.cadence",
-    "productName": "Cadence",
+    "appId": "com.quicksense.sensedesk",
+    "productName": "Sense Desk",
     "directories": {
       "output": "release"
     },
     "files": [
       "main.js",
       "preload.js",
-      "src/**/*",
+      "index.html",
+      "styles.css",
+      "app.js",
+      "storage.js",
+      "profile.js",
+      "playbook.js",
+      "sw.js",
+      "manifest.webmanifest",
+      "components/**/*",
+      "icons/**/*",
       "assets/**/*"
     ],
     "mac": {
