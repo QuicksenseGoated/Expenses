@@ -1,9 +1,20 @@
 /** Local Financer state — balance, spends, subscriptions, settings. */
 
 import { migrateCatalogId } from './catalog.js';
-import { projectNextBill, projectCancelBy, daysUntilPayday, billsBeforePayday } from './billing.js';
+import {
+  projectNextBill,
+  projectCancelBy,
+  daysUntilPayday,
+  billsBeforePayday,
+  monthlyEquivalent,
+  billDatesInMonth,
+  chargesWithinDays,
+  rollSubscriptionDates,
+  chargeAmount,
+} from './billing.js';
 
 const KEY = 'financer.v3';
+const SCHEMA_VERSION = 3;
 const LEGACY_KEYS = ['financer.v2', 'financer.v1'];
 
 const DEFAULT_WIDGETS = ['metrics', 'bills', 'recent'];
@@ -22,6 +33,7 @@ const empty = () => ({
     displayName: '',
     paydayDay: null,
     hideBalance: false,
+    theme: 'system',
     homeWidgets: [...DEFAULT_WIDGETS],
   },
 });
@@ -37,7 +49,8 @@ function normalize(state) {
   next.subscriptions = (next.subscriptions || []).map((sub) => {
     const catalogId = migrateCatalogId(sub.catalogId);
     const patch = catalogId !== sub.catalogId ? { catalogId } : {};
-    return Object.keys(patch).length ? { ...sub, ...patch } : sub;
+    const merged = Object.keys(patch).length ? { ...sub, ...patch } : sub;
+    return rollSubscriptionDates(merged);
   });
   if (changed || next.subscriptions.some((s, i) => s !== state.subscriptions?.[i])) {
     write(next);
@@ -101,12 +114,13 @@ export const Store = {
   },
 
   exportData() {
-    return JSON.stringify(read(), null, 2);
+    return JSON.stringify({ schemaVersion: SCHEMA_VERSION, ...read() }, null, 2);
   },
 
   importData(json) {
     const parsed = JSON.parse(json);
-    return write(normalize(parsed));
+    const { schemaVersion, ...rest } = parsed;
+    return write(normalize(rest));
   },
 
   setBalance(amount) {
@@ -165,10 +179,12 @@ export const Store = {
 
   addSubscription(entry) {
     const s = read();
-    if (s.subscriptions.some((x) => x.catalogId === entry.catalogId)) return s;
+    const catalogId = entry.catalogId || `custom:${uid()}`;
+    const isCustom = String(catalogId).startsWith('custom:');
+    if (!isCustom && s.subscriptions.some((x) => x.catalogId === catalogId)) return s;
     s.subscriptions.unshift({
       id: uid(),
-      catalogId: entry.catalogId,
+      catalogId,
       name: entry.name,
       category: entry.category,
       price: Number(entry.price),
@@ -224,7 +240,10 @@ export const Store = {
   },
 
   subsMonthly() {
-    return read().subscriptions.reduce((sum, x) => sum + Number(x.price || 0), 0);
+    return read().subscriptions.reduce(
+      (sum, x) => sum + monthlyEquivalent(x.price, x.cycle),
+      0
+    );
   },
 
   paydayIn() {
@@ -237,30 +256,32 @@ export const Store = {
   },
 
   billsBeforePaydayTotal() {
-    return this.billsBeforePayday().reduce((sum, x) => sum + Number(x.price || 0), 0);
+    return this.billsBeforePayday().reduce(
+      (sum, x) => sum + chargeAmount(x),
+      0
+    );
   },
 
-  /** Bills projected to charge in a calendar month (uses nextBill dates). */
+  /** Bills projected to charge in a calendar month (recurring projection). */
   monthSchedule(year, month) {
     const s = read();
     const payday = s.settings?.paydayDay;
     const today = new Date();
     today.setHours(12, 0, 0, 0);
 
-    const items = s.subscriptions
-      .map((sub) => {
-        const due = new Date(`${sub.nextBill}T12:00:00`);
-        return { ...sub, due, dueIso: sub.nextBill };
-      })
-      .filter((x) => x.due.getFullYear() === year && x.due.getMonth() === month);
-
     const byDate = new Map();
     let monthTotal = 0;
-    for (const item of items) {
-      monthTotal += Number(item.price || 0);
-      const key = item.dueIso;
-      if (!byDate.has(key)) byDate.set(key, []);
-      byDate.get(key).push(item);
+    let chargeCount = 0;
+
+    for (const sub of s.subscriptions) {
+      const dates = billDatesInMonth(sub, year, month);
+      for (const iso of dates) {
+        chargeCount += 1;
+        const amt = chargeAmount(sub);
+        monthTotal += amt;
+        if (!byDate.has(iso)) byDate.set(iso, []);
+        byDate.get(iso).push({ ...sub, dueIso: iso, price: amt });
+      }
     }
 
     const days = [...byDate.entries()]
@@ -279,7 +300,7 @@ export const Store = {
         };
       });
 
-    return { monthTotal, chargeCount: items.length, days };
+    return { monthTotal, chargeCount, days };
   },
 
   cancelAlerts(withinDays = 7) {
@@ -298,14 +319,17 @@ export const Store = {
   upcomingBills(days = 30) {
     const now = new Date();
     now.setHours(12, 0, 0, 0);
-    return read().subscriptions
-      .map((sub) => {
-        const due = new Date(`${sub.nextBill}T12:00:00`);
+    const rows = [];
+    for (const sub of read().subscriptions) {
+      for (const hit of chargesWithinDays(sub, days, now)) {
+        const due = new Date(`${hit.date}T12:00:00`);
         const diff = Math.round((due - now) / 86400000);
-        return { ...sub, daysUntil: diff };
-      })
-      .filter((x) => x.daysUntil >= 0 && x.daysUntil <= days)
-      .sort((a, b) => a.daysUntil - b.daysUntil);
+        rows.push({ ...sub, nextBill: hit.date, price: hit.amount, daysUntil: diff });
+      }
+    }
+    return rows
+      .filter((x) => x.daysUntil >= 0)
+      .sort((a, b) => a.daysUntil - b.daysUntil || a.name.localeCompare(b.name));
   },
 
   reservedForBills() {
@@ -321,9 +345,9 @@ export const Store = {
   runwayDays() {
     const s = read();
     if (s.balance == null) return null;
-    const burn = this.monthSpend();
+    const burn = this.monthSpend() + this.subsMonthly();
     if (burn <= 0) return null;
-    const daily = burn / Math.max(1, new Date().getDate());
+    const daily = burn / 30;
     return Math.max(0, Math.floor(s.balance / daily));
   },
 

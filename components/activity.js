@@ -47,11 +47,13 @@ export function renderActivity(root, ctx) {
         <div class="hero-empty-icon">↗</div>
         <h2>No transactions</h2>
         <p>Every purchase you log updates your live balance.</p>
+        <button type="button" class="btn primary" data-spend-empty>Log first spend</button>
       </section>
     `}
   `;
 
   root.querySelector('[data-spend]')?.addEventListener('click', () => openSpendSheet(ctx));
+  root.querySelector('[data-spend-empty]')?.addEventListener('click', () => openSpendSheet(ctx));
   root.querySelector('[data-income]')?.addEventListener('click', () => ctx.openIncome());
 
   root.querySelectorAll('[data-del]').forEach((b) => {

@@ -4,18 +4,35 @@ Premium mobile personal finance — balance, subscriptions, spending.
 
 **Live:** https://quicksensegoated.github.io/Expenses/
 
-## Experience
-Inspired by Monzo, Revolut, Copilot, Rocket Money, and YNAB.
+## Tabs
 
 | Tab | Purpose |
 |-----|---------|
-| **Home** | Dark balance card, safe-to-spend, 7-day chart, upcoming bills |
-| **Bills** | Your subs (empty until you add) + searchable catalog with links |
+| **Home** | Balance hero, safe-to-spend, metrics, upcoming bills, recent activity |
+| **Bills** | Your subscription stack + intelligent catalog search |
+| **+** | Log a spend from anywhere |
+| **Calendar** | Monthly bill timeline, cancel alerts, payday markers |
 | **Activity** | Transaction feed with undo |
-| **Plan** | Coach, budget envelopes, bill calendar |
-| **You** | Profile & reset |
 
-Gold **+** FAB logs spends from anywhere.
+**You** (profile, backup, theme) — tap the account icon on Home.
+
+## Features
+
+- Manual balance tracking with live spend/income
+- 174-product subscription catalog with plan picker
+- Custom subscriptions for anything not in the catalog
+- Billing anchor projection (signup anniversary, app store, etc.)
+- Dark mode (system / light / dark)
+- Local-only data with export/import
 
 ## Data
-Local on-device (`localStorage`). Migrates from older Financer saves automatically.
+
+Stored on-device (`localStorage` key `financer.v3`). Migrates from older Financer saves automatically.
+
+## Develop
+
+```bash
+npm run serve
+```
+
+Push to `main` deploys to GitHub Pages.

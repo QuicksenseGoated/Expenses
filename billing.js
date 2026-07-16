@@ -83,6 +83,96 @@ function billOnDay(year, month, day) {
   return new Date(year, month, Math.min(day, last), 12, 0, 0);
 }
 
+/** Normalize any billing cycle to a monthly cost. */
+export function monthlyEquivalent(price, cycle = 'monthly') {
+  const p = Number(price) || 0;
+  if (p <= 0) return 0;
+  if (cycle === 'yearly') return p / 12;
+  if (cycle === 'weekly') return (p * 52) / 12;
+  return p;
+}
+
+/** Charge amount for display in a month (actual cash, not normalized). */
+export function chargeAmount(sub) {
+  return Number(sub.price) || 0;
+}
+
+/** ISO dates in [year, month] when this subscription charges. */
+export function billDatesInMonth(sub, year, month) {
+  const cycle = sub.cycle || 'monthly';
+  const anchor = sub.billingAnchor;
+  let day = sub.billingDay;
+  if (!day && sub.nextBill) {
+    day = new Date(`${sub.nextBill}T12:00:00`).getDate();
+  }
+
+  if (cycle === 'yearly') {
+    const ref = sub.nextBill || sub.addedAt;
+    if (!ref) return [];
+    const refD = new Date(`${ref}T12:00:00`);
+    if (refD.getMonth() !== month) return [];
+    const chargeDay = day || refD.getDate();
+    return [billOnDay(year, month, chargeDay).toISOString().slice(0, 10)];
+  }
+
+  if (anchor === 'calendar_month_start') {
+    return [new Date(year, month, 1, 12, 0, 0).toISOString().slice(0, 10)];
+  }
+  if (anchor === 'calendar_month_end') {
+    return [new Date(year, month + 1, 0, 12, 0, 0).toISOString().slice(0, 10)];
+  }
+  if (day) {
+    return [billOnDay(year, month, day).toISOString().slice(0, 10)];
+  }
+  if (sub.nextBill) {
+    const d = new Date(`${sub.nextBill}T12:00:00`);
+    if (cycle === 'monthly') {
+      return [billOnDay(year, month, d.getDate()).toISOString().slice(0, 10)];
+    }
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      return [sub.nextBill];
+    }
+  }
+  return [];
+}
+
+/** Project charge dates for a sub within the next N days from `from`. */
+export function chargesWithinDays(sub, withinDays = 30, from = new Date()) {
+  const start = new Date(from);
+  start.setHours(12, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + withinDays);
+  const hits = [];
+
+  for (let i = 0; i < 4; i++) {
+    const probe = new Date(start);
+    probe.setMonth(probe.getMonth() + i);
+    const dates = billDatesInMonth(sub, probe.getFullYear(), probe.getMonth());
+    for (const iso of dates) {
+      const when = new Date(`${iso}T12:00:00`);
+      if (when >= start && when <= end) {
+        hits.push({ date: iso, amount: chargeAmount(sub) });
+      }
+    }
+  }
+  return hits;
+}
+
+/** Roll nextBill forward when it has passed. */
+export function rollSubscriptionDates(sub, from = new Date()) {
+  const today = new Date(from);
+  today.setHours(12, 0, 0, 0);
+  const todayIso = today.toISOString().slice(0, 10);
+  if (!sub.nextBill || sub.nextBill >= todayIso) return sub;
+
+  let day = sub.billingDay;
+  if (!day) day = new Date(`${sub.nextBill}T12:00:00`).getDate();
+  const anchor = sub.billingAnchor || 'signup_anniversary';
+  const next = projectNextBill({ billingAnchor: anchor, billingDay: day, from });
+  if (!next) return sub;
+  return { ...sub, nextBill: next, cancelBy: projectCancelBy(next) || sub.cancelBy };
+}
+
 /** Cancel-by = day before next bill (common grace window). */
 export function projectCancelBy(nextBillIso) {
   if (!nextBillIso) return null;

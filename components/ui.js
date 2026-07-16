@@ -44,12 +44,20 @@ export function initials(name = '') {
   return name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
+export function applyTheme(mode = 'system') {
+  const root = document.documentElement;
+  if (mode === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', mode);
+}
+
 export function toast(msg) {
   let el = document.getElementById('toast');
   if (!el) {
     el = document.createElement('div');
     el.id = 'toast';
     el.className = 'toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
     document.body.appendChild(el);
   }
   el.textContent = msg;
@@ -63,11 +71,11 @@ export function sheet({ title, body, actions = [] }) {
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay';
     overlay.innerHTML = `
-      <div class="sheet" role="dialog">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
         <div class="sheet-grab" aria-hidden="true"></div>
-        <header class="sheet-head"><h2>${esc(title)}</h2><button type="button" class="icon-btn" data-x aria-label="Close">✕</button></header>
+        <header class="sheet-head"><h2 id="sheet-title">${esc(title)}</h2><button type="button" class="icon-btn" data-x aria-label="Close">✕</button></header>
         <div class="sheet-body">${body}</div>
-        ${actions.length ? `<footer class="sheet-foot">${actions.map((a) => `<button type="button" class="btn ${a.primary ? 'primary' : ''}" data-act="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</footer>` : ''}
+        ${actions.length ? `<footer class="sheet-foot">${actions.map((a) => `<button type="button" class="btn ${a.primary ? 'primary' : ''} ${a.danger ? 'danger' : ''}" data-act="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</footer>` : ''}
       </div>
     `;
     document.body.appendChild(overlay);
@@ -77,12 +85,26 @@ export function sheet({ title, body, actions = [] }) {
       setTimeout(() => overlay.remove(), 200);
       resolve(payload);
     };
+    const onKey = (e) => { if (e.key === 'Escape') { document.removeEventListener('keydown', onKey); close(null); } };
+    document.addEventListener('keydown', onKey);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
     overlay.querySelector('[data-x]')?.addEventListener('click', () => close(null));
     overlay.querySelectorAll('[data-act]').forEach((btn) => {
       btn.addEventListener('click', () => close({ action: btn.dataset.act, overlay }));
     });
   });
+}
+
+export async function confirmSheet({ title, body, confirmLabel = 'Confirm', danger = false }) {
+  const result = await sheet({
+    title,
+    body: `<p class="confirm-body">${body}</p>`,
+    actions: [
+      { id: 'cancel', label: 'Cancel' },
+      { id: 'confirm', label: confirmLabel, primary: !danger, danger },
+    ],
+  });
+  return result?.action === 'confirm';
 }
 
 export function greeting() {
