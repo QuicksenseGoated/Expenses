@@ -946,7 +946,212 @@ a { color: var(--royal); }
 .tl-item strong { display: block; font-size: 0.9rem; }
 .tl-item p { margin: 2px 0 0; font-size: 0.84rem; color: var(--muted); }
 
-/* Plan */
+/* Calendar */
+.cal-hero {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #fff, var(--gold-soft));
+  border: 1px solid #e8d4a8;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cal-nav strong {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.cal-totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.cal-totals > div {
+  display: grid;
+  gap: 4px;
+}
+
+.cal-big {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.cal-timeline {
+  display: grid;
+  gap: 0;
+}
+
+.cal-day {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.cal-day:last-child { border-bottom: 0; }
+.cal-day.past { opacity: 0.55; }
+.cal-day.payday .cal-day-head b { color: var(--gold); }
+
+.cal-day-head {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.cal-day-head b {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.cal-day-head span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.payday-tag {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+  background: var(--gold-soft);
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.cal-day-charges {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cal-charge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  text-align: left;
+}
+
+.cal-charge span {
+  font-size: 0.88rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-charge b { flex-shrink: 0; font-size: 0.88rem; }
+
+.cal-day-total {
+  grid-column: 2;
+  margin-top: -4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: right;
+}
+
+.alert-panel {
+  border-color: #fde68a;
+  background: var(--warn-soft);
+  margin-bottom: 14px;
+}
+
+.alert-list { display: grid; gap: 8px; }
+
+.alert-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #fde68a;
+  background: #fff;
+  text-align: left;
+}
+
+.alert-row strong { display: block; font-size: 0.9rem; }
+.alert-row span { font-size: 0.78rem; color: var(--muted); }
+
+/* Home customize */
+.sheet-hint {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.section-picks {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.section-pick {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.section-pick.on {
+  border-color: var(--royal);
+  background: #eff6ff;
+}
+
+.section-pick input { margin-top: 2px; flex-shrink: 0; }
+.section-pick strong { display: block; font-size: 0.88rem; }
+.section-pick span { font-size: 0.78rem; color: var(--muted); }
+
+.link-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.link-card {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  text-align: left;
+}
+
+.link-card strong { font-size: 0.92rem; }
+.link-card span { font-size: 0.8rem; color: var(--muted); }
+
+/* Plan (legacy) */
 .plan-hero {
   display: flex;
   justify-content: space-between;

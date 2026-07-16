@@ -2,7 +2,7 @@ import { Store } from './store.js';
 import { renderHome, openSpendSheet, openIncomeSheet } from './components/home.js';
 import { renderBills, renderCatalog, renderSubDetail } from './components/bills.js';
 import { renderActivity } from './components/activity.js';
-import { renderPlan } from './components/plan.js';
+import { renderCalendar } from './components/calendar.js';
 import { renderProfile } from './components/profile.js';
 import { initInstallPrompt } from './components/install.js';
 import { TAB_ICONS } from './components/tab-icons.js';
@@ -11,12 +11,13 @@ const TABS = [
   { id: 'home', label: 'Home', icon: TAB_ICONS.home },
   { id: 'bills', label: 'Bills', icon: TAB_ICONS.bills },
   { id: 'spend', label: 'Spend', center: true },
-  { id: 'plan', label: 'Plan', icon: TAB_ICONS.plan },
+  { id: 'calendar', label: 'Calendar', icon: TAB_ICONS.calendar },
   { id: 'profile', label: 'You', icon: TAB_ICONS.profile }
 ];
 
 const root = document.getElementById('app');
 let route = localStorage.getItem('financer.route') || 'home';
+if (route === 'plan') route = 'calendar';
 if (!TABS.some((t) => t.id === route)) route = 'home';
 
 let overlay = null;
@@ -125,7 +126,7 @@ function paint() {
     home: renderHome,
     bills: renderBills,
     activity: renderActivity,
-    plan: renderPlan,
+    calendar: renderCalendar,
     profile: renderProfile
   };
   (map[route] || renderHome)(view, ctx);

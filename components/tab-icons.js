@@ -10,10 +10,10 @@ export const TAB_ICONS = {
     <rect x="3" y="5" width="18" height="14" rx="2"/>
     <path d="M3 10h18M7 15h4"/>
   `),
-  plan: svg(`
-    <path d="M12 20V10"/>
-    <path d="M18 20V4"/>
-    <path d="M6 20v-6"/>
+  calendar: svg(`
+    <rect x="3" y="5" width="18" height="16" rx="2"/>
+    <path d="M3 10h18M8 3v4M16 3v4"/>
+    <path d="M8 14h2v2H8zM14 14h2v2h-2z"/>
   `),
   profile: svg(`
     <circle cx="12" cy="8" r="4"/>

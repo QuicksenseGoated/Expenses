@@ -6,7 +6,7 @@ import { projectNextBill, projectCancelBy, daysUntilPayday, billsBeforePayday } 
 const KEY = 'financer.v3';
 const LEGACY_KEYS = ['financer.v2', 'financer.v1'];
 
-const DEFAULT_WIDGETS = ['paycheck', 'safe', 'metrics', 'bills', 'budgets', 'recent'];
+const DEFAULT_WIDGETS = ['metrics', 'bills', 'recent'];
 
 const empty = () => ({
   balance: null,
@@ -238,6 +238,61 @@ export const Store = {
 
   billsBeforePaydayTotal() {
     return this.billsBeforePayday().reduce((sum, x) => sum + Number(x.price || 0), 0);
+  },
+
+  /** Bills projected to charge in a calendar month (uses nextBill dates). */
+  monthSchedule(year, month) {
+    const s = read();
+    const payday = s.settings?.paydayDay;
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+
+    const items = s.subscriptions
+      .map((sub) => {
+        const due = new Date(`${sub.nextBill}T12:00:00`);
+        return { ...sub, due, dueIso: sub.nextBill };
+      })
+      .filter((x) => x.due.getFullYear() === year && x.due.getMonth() === month);
+
+    const byDate = new Map();
+    let monthTotal = 0;
+    for (const item of items) {
+      monthTotal += Number(item.price || 0);
+      const key = item.dueIso;
+      if (!byDate.has(key)) byDate.set(key, []);
+      byDate.get(key).push(item);
+    }
+
+    const days = [...byDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([iso, rows]) => {
+        const d = new Date(`${iso}T12:00:00`);
+        const dayNum = d.getDate();
+        return {
+          iso,
+          dayNum,
+          weekday: d.toLocaleDateString(undefined, { weekday: 'short' }),
+          isPayday: payday != null && dayNum === Number(payday),
+          isPast: d < today,
+          items: rows,
+          dayTotal: rows.reduce((sum, r) => sum + Number(r.price || 0), 0),
+        };
+      });
+
+    return { monthTotal, chargeCount: items.length, days };
+  },
+
+  cancelAlerts(withinDays = 7) {
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+    return read().subscriptions
+      .map((sub) => {
+        const cancel = new Date(`${sub.cancelBy}T12:00:00`);
+        const daysUntilCancel = Math.round((cancel - now) / 86400000);
+        return { ...sub, daysUntilCancel };
+      })
+      .filter((x) => x.daysUntilCancel >= 0 && x.daysUntilCancel <= withinDays)
+      .sort((a, b) => a.daysUntilCancel - b.daysUntilCancel);
   },
 
   upcomingBills(days = 30) {

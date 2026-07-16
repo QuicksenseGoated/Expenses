@@ -1,21 +1,26 @@
 import { Store } from '../store.js';
 import { greeting, money, niceDate, esc, toast, sheet, $ } from './ui.js';
-import { anchorLabel, anchorHint } from '../billing.js';
+
+const SECTIONS = [
+  { id: 'paycheck', label: 'Paycheck radar', desc: 'Bills before payday' },
+  { id: 'subs_audit', label: 'Sub load', desc: 'Cost vs balance' },
+];
 
 const WIDGET_META = {
-  paycheck: { title: 'Paycheck radar', render: renderPaycheck },
-  safe: { title: 'Safe to spend', render: renderSafe },
-  metrics: { title: 'Month snapshot', render: renderMetrics },
-  bills: { title: 'Upcoming bills', render: renderBills },
-  budgets: { title: 'Budget envelopes', render: renderBudgets },
-  recent: { title: 'Recent activity', render: renderRecent },
-  subs_audit: { title: 'Subscription load', render: renderSubsAudit },
+  paycheck: { render: renderPaycheck },
+  metrics: { render: renderMetrics },
+  bills: { render: renderBills },
+  recent: { render: renderRecent },
+  subs_audit: { render: renderSubsAudit },
 };
+
+const CORE = ['metrics', 'bills', 'recent'];
 
 export function renderHome(root, ctx) {
   const s = Store.get();
   const settings = s.settings || {};
-  const widgets = (settings.homeWidgets || []).filter((id) => WIDGET_META[id]);
+  const optional = (settings.homeWidgets || []).filter((id) => WIDGET_META[id] && !CORE.includes(id));
+  const widgets = [...CORE, ...optional];
   const hasBal = s.balance != null;
   const displayName = settings.displayName?.trim();
   const hideBal = settings.hideBalance;
@@ -40,14 +45,13 @@ export function renderHome(root, ctx) {
           <div class="balance-meta">
             <span>Safe ${money(Store.safeToSpend(), s.currency)}</span>
             <span>·</span>
-            <span>${money(Store.reservedForBills(), s.currency)} reserved for bills</span>
+            <span>${money(Store.reservedForBills(), s.currency)} reserved</span>
           </div>
         ` : hasBal && hideBal ? `
-          <p class="balance-amount dim">Hidden</p>
-          <p class="balance-hint">Balance hidden in You → Privacy.</p>
+          <p class="balance-amount dim">••••</p>
         ` : `
           <p class="balance-amount dim">Set your balance</p>
-          <p class="balance-hint">Enter what's in your account — we track it as you spend.</p>
+          <p class="balance-hint">Tap below to enter what's in your account.</p>
         `}
       </div>
       <div class="quick-actions">
@@ -61,12 +65,8 @@ export function renderHome(root, ctx) {
       </div>
     </section>
 
-    <div class="home-widgets" id="widgets">
-      ${widgets.length ? widgets.map((id) => `<div class="home-widget" data-wid="${id}"></div>`).join('') : `
-        <section class="hero-empty compact">
-          <p>No widgets enabled. Tap ⚙ to customize your home.</p>
-        </section>
-      `}
+    <div class="home-widgets">
+      ${widgets.map((id) => `<div class="home-widget" data-wid="${id}"></div>`).join('')}
     </div>
   `;
 
@@ -75,47 +75,74 @@ export function renderHome(root, ctx) {
     if (slot) WIDGET_META[id].render(slot, ctx, s);
   });
 
-  root.querySelector('[data-customize]')?.addEventListener('click', () => ctx.navigate('profile'));
+  root.querySelector('[data-customize]')?.addEventListener('click', () => openCustomizeSheet(ctx));
   root.querySelector('[data-setup]')?.addEventListener('click', () => openBalanceSheet(ctx));
   root.querySelector('[data-edit]')?.addEventListener('click', () => openBalanceSheet(ctx, s.balance));
   root.querySelector('[data-spend]')?.addEventListener('click', () => ctx.openSpend());
   root.querySelector('[data-income]')?.addEventListener('click', () => openIncomeSheet(ctx));
 }
 
+export async function openCustomizeSheet(ctx) {
+  const s = Store.get();
+  const settings = s.settings || {};
+  const enabled = new Set(settings.homeWidgets || []);
+  const result = await sheet({
+    title: 'Your home',
+    body: `
+      <p class="sheet-hint">Core sections always show. Toggle extras below.</p>
+      <div class="section-picks">
+        ${SECTIONS.map((sec) => `
+          <label class="section-pick ${enabled.has(sec.id) ? 'on' : ''}">
+            <input type="checkbox" data-sec="${sec.id}" ${enabled.has(sec.id) ? 'checked' : ''} />
+            <div>
+              <strong>${esc(sec.label)}</strong>
+              <span>${esc(sec.desc)}</span>
+            </div>
+          </label>
+        `).join('')}
+      </div>
+      <label class="field"><span>Your name</span><input id="c-name" maxlength="24" value="${esc(settings.displayName || '')}" placeholder="Shows on home" /></label>
+      <label class="field"><span>Payday (day 1–31)</span><input id="c-payday" type="number" min="1" max="31" value="${settings.paydayDay ?? ''}" placeholder="e.g. 25" /></label>
+      <label class="field"><span>Currency</span>
+        <select id="c-currency">
+          ${['€', '$', '£'].map((c) => `<option value="${c}" ${s.currency === c ? 'selected' : ''}>${c}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field checkbox-row">
+        <input type="checkbox" id="c-hide" ${settings.hideBalance ? 'checked' : ''} />
+        <span>Hide balance on home</span>
+      </label>
+    `,
+    actions: [{ id: 'save', label: 'Done', primary: true }],
+  });
+  if (result?.action !== 'save') return;
+
+  const overlay = result.overlay;
+  const picked = [...CORE];
+  overlay.querySelectorAll('[data-sec]:checked').forEach((cb) => picked.push(cb.dataset.sec));
+  const payday = $('#c-payday', overlay)?.value;
+  Store.updateSettings({
+    displayName: String($('#c-name', overlay)?.value || '').trim(),
+    paydayDay: payday ? Number(payday) : null,
+    hideBalance: $('#c-hide', overlay)?.checked || false,
+    homeWidgets: [...new Set(picked)],
+  });
+  Store.setCurrency($('#c-currency', overlay)?.value || s.currency);
+  toast('Home updated');
+  ctx.refresh();
+}
+
 function renderPaycheck(slot, ctx, s) {
   const days = Store.paydayIn();
   const before = Store.billsBeforePayday();
   const total = Store.billsBeforePaydayTotal();
-  if (!s.settings?.paydayDay) {
-    slot.innerHTML = `
-      <section class="panel insight">
-        <h2>Paycheck radar</h2>
-        <p class="empty-sm">Set your payday in <button type="button" class="link-btn" data-go="profile">You</button> to see bills due before income hits.</p>
-      </section>`;
-    slot.querySelector('[data-go]')?.addEventListener('click', () => ctx.navigate('profile'));
-    return;
-  }
+  if (!s.settings?.paydayDay) return;
   slot.innerHTML = `
     <section class="panel insight ${before.length ? 'warn' : 'ok'}">
-      <div class="panel-head"><h2>Paycheck radar</h2><span class="pill">${days}d to payday</span></div>
+      <div class="panel-head"><h2>Paycheck radar</h2><span class="pill">${days}d</span></div>
       <p class="insight-body">${before.length
-    ? `${before.length} bill${before.length === 1 ? '' : 's'} (${money(total, s.currency)}) due before you get paid.`
-    : `No tracked bills before your next payday in ${days} days.`}</p>
-    </section>`;
-}
-
-function renderSafe(slot, ctx, s) {
-  const safe = Store.safeToSpend();
-  const subs = Store.subsMonthly();
-  slot.innerHTML = `
-    <section class="panel safe-strip">
-      <div>
-        <span class="metric-label">Safe to spend today</span>
-        <strong class="safe-big">${safe == null ? '—' : money(safe, s.currency)}</strong>
-      </div>
-      <div class="safe-side">
-        <span>After ${money(subs, s.currency)}/mo subs reserved</span>
-      </div>
+    ? `${before.length} bill${before.length === 1 ? '' : 's'} (${money(total, s.currency)}) due before payday.`
+    : `No bills before payday in ${days} days.`}</p>
     </section>`;
 }
 
@@ -161,30 +188,10 @@ function renderBills(slot, ctx, s) {
             </button>
           `).join('')}
         </div>
-      ` : `<p class="empty-sm">No bills tracked. <button type="button" class="link-btn" data-go="bills">Add one</button></p>`}
+      ` : `<p class="empty-sm">No bills yet. <button type="button" class="link-btn" data-go="bills">Add one</button></p>`}
     </section>`;
   slot.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => ctx.navigate(b.dataset.go)));
   slot.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => ctx.openSub(b.dataset.sub)));
-}
-
-function renderBudgets(slot, ctx, s) {
-  const budgets = Store.budgetBurn();
-  slot.innerHTML = `
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Budget envelopes</h2>
-        <button type="button" class="link-btn" data-go="plan">Plan</button>
-      </div>
-      <div class="mini-envelopes">
-        ${budgets.map((b) => `
-          <div class="mini-env">
-            <div class="mini-env-head"><strong>${esc(b.name)}</strong><span>${b.pct}%</span></div>
-            <div class="env-bar"><i style="width:${b.pct}%;background:${b.color}"></i></div>
-          </div>
-        `).join('')}
-      </div>
-    </section>`;
-  slot.querySelector('[data-go]')?.addEventListener('click', () => ctx.navigate('plan'));
 }
 
 function renderRecent(slot, ctx, s) {
@@ -193,7 +200,7 @@ function renderRecent(slot, ctx, s) {
     <section class="panel">
       <div class="panel-head">
         <h2>Recent</h2>
-        <button type="button" class="link-btn" data-go="activity">Activity</button>
+        <button type="button" class="link-btn" data-go="activity">All</button>
       </div>
       ${recent.length ? `
         <div class="feed">
@@ -208,7 +215,7 @@ function renderRecent(slot, ctx, s) {
             </div>
           `).join('')}
         </div>
-      ` : `<p class="empty-sm">No activity yet.</p>`}
+      ` : `<p class="empty-sm">No spends logged yet.</p>`}
     </section>`;
   slot.querySelector('[data-go]')?.addEventListener('click', () => ctx.navigate('activity'));
 }
@@ -220,10 +227,8 @@ function renderSubsAudit(slot, ctx, s) {
   slot.innerHTML = `
     <section class="panel insight ${pct != null && pct > 40 ? 'warn' : ''}">
       <h2>Subscription load</h2>
-      <p class="insight-body">${money(subs, s.currency)}/month across ${s.subscriptions.length} tracked subs${pct != null ? ` — ${pct}% of current balance` : ''}.</p>
-      <button type="button" class="link-btn" data-go="bills">Audit stack →</button>
+      <p class="insight-body">${money(subs, s.currency)}/mo · ${s.subscriptions.length} subs${pct != null ? ` (${pct}% of balance)` : ''}.</p>
     </section>`;
-  slot.querySelector('[data-go]')?.addEventListener('click', () => ctx.navigate('bills'));
 }
 
 async function openBalanceSheet(ctx, current = '') {
