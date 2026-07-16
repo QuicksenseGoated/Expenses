@@ -28,12 +28,18 @@ Built around:
 - Every clip CTAs to Twitch
 - Series: Rank or Ruin, Operator Lock, Chat Decides, Siege Brain
 
-## Run
+## Run / PWA
+
+**Phone (recommended):** open the GitHub Pages URL after deploy, then  
+- Android: Chrome → Install app  
+- iPhone: Safari → Share → Add to Home Screen  
 
 ```bash
 npm install
-npm start          # Electron
-npm run serve      # http://localhost:5173
+npm run serve      # local: http://localhost:5173
+npm start          # optional Electron wrapper
 ```
 
-Data is local (`localStorage`). Re-seed from Settings anytime.
+Static web app lives in `src/` and deploys as a PWA via GitHub Actions → Pages.
+
+Data is local (`localStorage` on that device). Re-seed from Settings anytime.

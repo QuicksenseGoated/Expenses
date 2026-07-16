@@ -24,6 +24,12 @@ export function renderSettings(root, ctx) {
           <button type="button" class="btn danger" data-clear>Erase all desk data</button>
         </section>
         <section class="panel">
+          <h2>Install on phone (PWA)</h2>
+          <p class="panel-note"><strong>Android Chrome:</strong> open the site → menu ⋮ → Install app / Add to Home screen.</p>
+          <p class="panel-note"><strong>iPhone Safari:</strong> Share → Add to Home Screen.</p>
+          <p class="panel-note">Once installed it opens fullscreen like an app, and works offline for the shell.</p>
+        </section>
+        <section class="panel">
           <h2>About</h2>
           <p class="panel-note">This isn’t a blank planner. It’s a social media manager desk: weekly ops, clip factory, growth plays, and a scoreboard tied to Twitch avg viewers + TikTok views.</p>
         </section>
