@@ -96,21 +96,91 @@ export function getCatalogEntry(catalogId) {
   };
 }
 
-export function searchProducts(query, { minChars = 0 } = {}) {
-  const q = String(query || "").trim().toLowerCase();
-  if (minChars > 0 && q.length < minChars) return [];
-  let rows = !q ? [...PRODUCTS] : PRODUCTS.filter((p) => {
-    const hay = [
-      p.name,
-      p.category,
-      p.why,
-      ...(p.plans || []).map((pl) => `${pl.name} ${pl.blurb || ""}`),
-    ]
-      .join(" ")
-      .toLowerCase();
-    return hay.includes(q);
+export function searchProducts(query, { minChars = 0, category = null, limit = null } = {}) {
+  const raw = String(query || "").trim().toLowerCase();
+  if (minChars > 0 && raw.length < minChars) return [];
+
+  const tokens = expandQuery(raw);
+  let rows = PRODUCTS.filter((p) => {
+    if (category && category !== 'all' && p.category !== category) return false;
+    if (!tokens.length) return true;
+    const hay = productHaystack(p);
+    return tokens.every((t) => hay.includes(t));
   });
-  return rows.sort((a, b) => a.name.localeCompare(b.name));
+
+  if (tokens.length) {
+    rows.sort((a, b) => scoreProduct(b, tokens) - scoreProduct(a, tokens) || a.name.localeCompare(b.name));
+  } else {
+    rows.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  if (limit != null && limit > 0) return rows.slice(0, limit);
+  return rows;
+}
+
+const SEARCH_ALIASES = {
+  hbo: 'max',
+  yt: 'youtube',
+  chatgpt: 'openai',
+  gpt: 'openai',
+  prime: 'amazon',
+  disney: 'disney',
+  ps: 'playstation',
+  xbox: 'xbox',
+  apple: 'apple',
+  icloud: 'icloud',
+};
+
+function expandQuery(raw) {
+  if (!raw) return [];
+  return raw.split(/\s+/).filter(Boolean).flatMap((t) => {
+    const alias = SEARCH_ALIASES[t];
+    return alias ? [t, alias] : [t];
+  });
+}
+
+function productHaystack(product) {
+  const catLabel = CATEGORIES.find((c) => c.id === product.category)?.label || '';
+  return [
+    product.id,
+    product.name,
+    product.category,
+    catLabel,
+    product.why,
+    ...(product.plans || []).flatMap((pl) => [pl.name, pl.id, pl.blurb || '']),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function scoreProduct(product, tokens) {
+  const name = product.name.toLowerCase();
+  const id = product.id.toLowerCase();
+  const cat = (CATEGORIES.find((c) => c.id === product.category)?.label || product.category).toLowerCase();
+  let score = 0;
+
+  for (const token of tokens) {
+    if (name === token) score += 120;
+    else if (id === token) score += 110;
+    else if (name.startsWith(token)) score += 90;
+    else if (id.startsWith(token)) score += 85;
+    else if (name.split(/\s+/).some((w) => w.startsWith(token))) score += 75;
+    else if (name.includes(token)) score += 55;
+    else if (id.includes(token)) score += 50;
+    else if (cat.includes(token)) score += 35;
+
+    for (const plan of product.plans || []) {
+      const pn = plan.name.toLowerCase();
+      if (pn === token) score += 65;
+      else if (pn.startsWith(token)) score += 45;
+      else if (pn.includes(token)) score += 30;
+    }
+
+    if (product.why?.toLowerCase().includes(token)) score += 12;
+  }
+
+  return score;
 }
 
 export function priceLabel(price, cycle = "monthly") {
