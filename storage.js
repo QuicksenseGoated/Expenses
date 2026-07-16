@@ -8,7 +8,8 @@ const KEYS = {
   savedIdeas: 'sense.savedIdeas',
   focus: 'sense.focusPlay',
   raids: 'sense.raids',
-  customIdeas: 'sense.customIdeas'
+  customIdeas: 'sense.customIdeas',
+  todayRaid: 'sense.todayRaid'
 };
 
 function read(key, fallback) {
@@ -45,10 +46,10 @@ export const Storage = {
       write(KEYS.focus, FOCUS_PLAYS[0].id);
       write(KEYS.raids, []);
       write(KEYS.customIdeas, []);
+      write(KEYS.todayRaid, null);
       write(KEYS.seeded, true);
       return;
     }
-    // additive migrations
     if (read(KEYS.raids, null) == null) write(KEYS.raids, []);
     if (read(KEYS.customIdeas, null) == null) write(KEYS.customIdeas, []);
   },
@@ -98,6 +99,7 @@ export const Storage = {
       note: '',
       tag: null,
       ideaId: null,
+      verdict: null, // repeat | kill | null
       ...post
     };
     write(KEYS.posts, [item, ...this.getPosts()].slice(0, 200));
@@ -177,6 +179,14 @@ export const Storage = {
     this.saveRaids(this.getRaids().filter((x) => x !== name));
   },
 
+  getTodayRaid() {
+    return read(KEYS.todayRaid, null);
+  },
+
+  setTodayRaid(name) {
+    write(KEYS.todayRaid, name || null);
+  },
+
   getCustomIdeas() {
     return read(KEYS.customIdeas, []);
   },
@@ -210,7 +220,8 @@ export const Storage = {
       savedIdeas: [...this.getSavedIdeas()],
       focus: this.getFocusPlayId(),
       raids: this.getRaids(),
-      customIdeas: this.getCustomIdeas()
+      customIdeas: this.getCustomIdeas(),
+      todayRaid: this.getTodayRaid()
     };
   },
 
@@ -223,6 +234,7 @@ export const Storage = {
     if (data.focus) write(KEYS.focus, data.focus);
     if (data.raids) write(KEYS.raids, data.raids);
     if (data.customIdeas) write(KEYS.customIdeas, data.customIdeas);
+    if (data.todayRaid !== undefined) write(KEYS.todayRaid, data.todayRaid);
     write(KEYS.seeded, true);
   }
 };

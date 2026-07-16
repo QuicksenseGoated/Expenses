@@ -1,4 +1,4 @@
-const CACHE = 'sense-desk-v3.1';
+const CACHE = 'sense-desk-v3.2';
 const ASSETS = [
   './',
   './index.html',
@@ -14,7 +14,8 @@ const ASSETS = [
   './components/ideas.js',
   './components/numbers.js',
   './components/more.js',
-  './components/modal.js'
+  './components/modal.js',
+  './components/log.js'
 ];
 
 self.addEventListener('install', (e) => {

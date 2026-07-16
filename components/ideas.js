@@ -2,7 +2,7 @@ import { IDEAS, CLIENT } from '../facts.js';
 import { Storage } from '../storage.js';
 import { tagStats, bestTag } from '../analytics.js';
 import { escapeHtml, openModal } from './modal.js';
-import { quickLog } from './today.js';
+import { quickLog } from './log.js';
 
 const TAGS = ['all', 'clutch', 'fail', 'chat', 'series', 'teaser', 'variety', 'custom'];
 

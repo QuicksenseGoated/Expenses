@@ -1,7 +1,7 @@
 import { Storage } from '../storage.js';
-import { quotaLine, tagStats, delta, WEEKLY_CLIP_TARGET } from '../analytics.js';
+import { quotaLine, tagStats, delta, WEEKLY_CLIP_TARGET, needsViews, weekReview } from '../analytics.js';
 import { escapeHtml, openModal } from './modal.js';
-import { quickLog } from './today.js';
+import { quickLog, updateViews } from './log.js';
 
 export function renderNumbers(root, ctx) {
   const s = Storage.getScore();
@@ -9,6 +9,8 @@ export function renderNumbers(root, ctx) {
   const top = Storage.topPosts(5);
   const quota = quotaLine(posts);
   const tags = tagStats(posts).filter((t) => t.count > 0);
+  const pending = needsViews(posts, 10);
+  const review = weekReview(posts);
   const acvD = delta(s.history, 'twitchAcv');
   const ttD = delta(s.history, 'tiktokViewsWeek');
   const hist = (s.history || []).slice(0, 8);
@@ -19,7 +21,7 @@ export function renderNumbers(root, ctx) {
         <div>
           <p class="eyebrow">Numbers</p>
           <h1>Scoreboard</h1>
-          <p class="sub">ACV first. Week quota ${quota.weekCount}/${WEEKLY_CLIP_TARGET}.</p>
+          <p class="sub">ACV first. Quota ${quota.weekCount}/${WEEKLY_CLIP_TARGET}. ${escapeHtml(review.nextWeek)}</p>
         </div>
         <button type="button" class="btn primary" data-add>Log post</button>
       </header>
@@ -44,14 +46,28 @@ export function renderNumbers(root, ctx) {
         <button type="submit" class="btn primary">Save snapshot</button>
       </form>
 
+      ${pending.length ? `
+        <section class="panel" style="margin-top:0.85rem">
+          <h2>Needs views (${pending.length})</h2>
+          <ul class="post-list compact">
+            ${pending.map((p) => `
+              <li>
+                <div><strong>${escapeHtml(p.title)}</strong><span>${escapeHtml(p.date)} · ${escapeHtml(p.tag || '')}</span></div>
+                <button type="button" class="btn ghost" data-views="${p.id}">Add</button>
+              </li>
+            `).join('')}
+          </ul>
+        </section>
+      ` : ''}
+
       ${tags.length ? `
         <section class="panel" style="margin-top:0.85rem">
           <h2>Tag performance</h2>
           <ul class="kv">
             ${tags.map((t) => `
               <li>
-                <span>${escapeHtml(t.tag)} · ${t.count} posts</span>
-                <strong>${t.avg != null ? `avg ${fmt(t.avg)}` : 'no views yet'}</strong>
+                <span>${escapeHtml(t.tag)} · ${t.count}</span>
+                <strong>${t.avg != null ? `avg ${fmt(t.avg)}` : 'no views'}</strong>
               </li>
             `).join('')}
           </ul>
@@ -62,7 +78,7 @@ export function renderNumbers(root, ctx) {
         <section class="panel" style="margin-top:0.85rem">
           <h2>Top posts</h2>
           <ol class="steps">
-            ${top.map((p) => `<li><strong>${escapeHtml(p.title)}</strong> — ${fmt(p.views)} · ${escapeHtml(p.tag || p.platform)}</li>`).join('')}
+            ${top.map((p) => `<li><strong>${escapeHtml(p.title)}</strong> — ${fmt(p.views)} · ${escapeHtml(p.tag || p.platform)}${p.verdict ? ` · ${escapeHtml(p.verdict)}` : ''}</li>`).join('')}
           </ol>
         </section>
       ` : ''}
@@ -73,14 +89,15 @@ export function renderNumbers(root, ctx) {
           <li>
             <div>
               <strong>${escapeHtml(p.title)}</strong>
-              <span>${escapeHtml(p.date)} · ${escapeHtml(p.platform)}${p.tag ? ` · ${escapeHtml(p.tag)}` : ''} · ${fmt(p.views)}${p.note ? ` · ${escapeHtml(p.note)}` : ''}</span>
+              <span>${escapeHtml(p.date)} · ${escapeHtml(p.platform)}${p.tag ? ` · ${escapeHtml(p.tag)}` : ''} · ${fmt(p.views)}${p.verdict ? ` · ${escapeHtml(p.verdict)}` : ''}</span>
             </div>
             <div class="row-actions">
+              ${p.views == null ? `<button type="button" class="text-btn" data-views="${p.id}">Views</button>` : ''}
               <button type="button" class="text-btn" data-edit="${p.id}">Edit</button>
               <button type="button" class="text-btn" data-del="${p.id}">Del</button>
             </div>
           </li>
-        `).join('') || `<li class="empty-inline">Log after you post. Tag it so Ideas ranks from your data.</li>`}
+        `).join('') || `<li class="empty-inline">Log after you post.</li>`}
       </ul>
 
       ${hist.length ? `
@@ -115,6 +132,10 @@ export function renderNumbers(root, ctx) {
   });
 
   root.querySelector('[data-add]')?.addEventListener('click', () => quickLog(ctx, {}));
+
+  root.querySelectorAll('[data-views]').forEach((b) => {
+    b.addEventListener('click', () => updateViews(ctx, posts.find((p) => p.id === b.dataset.views)));
+  });
 
   root.querySelectorAll('[data-edit]').forEach((b) => {
     b.addEventListener('click', () => editPost(posts.find((p) => p.id === b.dataset.edit), ctx));
@@ -152,7 +173,16 @@ function editPost(post, ctx) {
             </select>
           </label>
         </div>
-        <label class="field"><span>Note</span><input name="note" value="${escapeHtml(post.note || '')}" /></label>
+        <div class="form-row">
+          <label class="field"><span>Verdict</span>
+            <select name="verdict">
+              <option value="" ${!post.verdict ? 'selected' : ''}>—</option>
+              <option value="repeat" ${post.verdict === 'repeat' ? 'selected' : ''}>repeat</option>
+              <option value="kill" ${post.verdict === 'kill' ? 'selected' : ''}>kill</option>
+            </select>
+          </label>
+          <label class="field"><span>Note</span><input name="note" value="${escapeHtml(post.note || '')}" /></label>
+        </div>
       </form>
     `,
     footerHtml: `<button type="button" class="btn ghost" data-x>Cancel</button><button type="button" class="btn primary" data-s>Save</button>`,
@@ -168,6 +198,7 @@ function editPost(post, ctx) {
           views: fd.get('views') === '' ? null : Number(fd.get('views')),
           date: String(fd.get('date')),
           tag: String(fd.get('tag')),
+          verdict: String(fd.get('verdict') || '') || null,
           note: String(fd.get('note') || '').trim()
         });
         ctx.toast('Updated');

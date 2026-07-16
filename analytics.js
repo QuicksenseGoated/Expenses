@@ -116,4 +116,38 @@ export function quotaLine(posts, d = new Date()) {
   };
 }
 
+export function needsViews(posts, limit = 8) {
+  return posts.filter((p) => p.views == null).slice(0, limit);
+}
+
+export function weekReview(posts, d = new Date()) {
+  const week = postsInWeek(posts, d);
+  const withViews = week.filter((p) => p.views != null).sort((a, b) => (b.views || 0) - (a.views || 0));
+  const top = withViews.slice(0, 3);
+  const bottom = [...withViews].reverse().slice(0, 3);
+  const tags = tagStats(week);
+  const best = tags.find((t) => t.withViews >= 1 && t.tag !== 'untagged') || null;
+  const worst = [...tags].reverse().find((t) => t.withViews >= 1 && t.tag !== 'untagged' && (!best || t.tag !== best.tag)) || null;
+  const missingViews = week.filter((p) => p.views == null).length;
+  const repeats = week.filter((p) => p.verdict === 'repeat');
+  const kills = week.filter((p) => p.verdict === 'kill');
+  let nextWeek = 'Keep 2–4 same-day clips per Siege stream. Tag every log.';
+  if (best) nextWeek = `Double down on ${best.tag} (avg ${best.avg ?? '—'} this week).`;
+  if (worst && best && worst.avg != null && best.avg != null && worst.avg < best.avg * 0.4) {
+    nextWeek += ` Cut ${worst.tag} volume.`;
+  }
+  return {
+    weekCount: week.length,
+    top,
+    bottom,
+    best,
+    worst,
+    missingViews,
+    repeats,
+    kills,
+    nextWeek,
+    empty: week.length === 0
+  };
+}
+
 export { CLIENT };
