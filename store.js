@@ -33,7 +33,7 @@ const empty = () => ({
     displayName: '',
     paydayDay: null,
     hideBalance: false,
-    theme: 'system',
+    theme: 'light',
     homeWidgets: [...DEFAULT_WIDGETS],
   },
 });
@@ -46,6 +46,10 @@ function normalize(state) {
     changed = true;
   }
   next.settings = { ...empty().settings, ...next.settings };
+  if (next.settings.theme === 'system') {
+    next.settings.theme = 'light';
+    changed = true;
+  }
   next.subscriptions = (next.subscriptions || []).map((sub) => {
     const catalogId = migrateCatalogId(sub.catalogId);
     const patch = catalogId !== sub.catalogId ? { catalogId } : {};

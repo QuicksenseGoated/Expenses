@@ -69,7 +69,7 @@ const ctx = {
 
 function boot() {
   const s = Store.get();
-  applyTheme(s.settings?.theme || 'system');
+  applyTheme(s.settings?.theme || 'light');
   shell();
   paint();
   initInstallPrompt();

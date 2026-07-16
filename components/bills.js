@@ -161,17 +161,14 @@ export function renderBills(root, ctx) {
     results.hidden = false;
 
     if (showAll) {
-      const featuredIds = new Set(FEATURED);
-      const all = searchProducts('', { category: 'all' }).filter((p) => !featuredIds.has(p.id));
       results.innerHTML = `
-        <p class="library-section-label">All services</p>
-        ${all.map((p) => productRow(p)).join('')}
+        <p class="library-hint-block">Pick a category chip or start typing to search all ${PRODUCT_COUNT} services.</p>
       `;
-    } else {
-      results.innerHTML = rows.length
-        ? rows.map((p) => productRow(p)).join('')
-        : `<p class="empty-sm">Try a different name or category.</p>`;
+      return;
     }
+    results.innerHTML = rows.length
+      ? rows.map((p) => productRow(p)).join('')
+      : `<p class="empty-sm">Try a different name or category.</p>`;
     wireProductClicks(results);
   };
 
