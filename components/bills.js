@@ -210,19 +210,19 @@ export function renderBills(root, ctx) {
   paint();
 }
 
-function dateStripHtml(sub, life) {
+function dateHeroHtml(sub, life) {
   const cells = [];
   if (life.onTrial) {
-    cells.push({ label: 'Trial', date: sub.trialEnds, days: life.trialDaysLeft, urgent: life.urgentTrial });
+    cells.push({ label: 'Trial ends', date: sub.trialEnds, days: life.trialDaysLeft, urgent: life.urgentTrial });
   }
   cells.push({
-    label: life.onTrial ? 'Charge' : 'Renews',
+    label: life.onTrial ? 'First charge' : 'Renews',
     date: sub.nextBill,
     days: life.daysUntilCharge,
     urgent: !life.onTrial && life.urgentCharge,
   });
   cells.push({
-    label: 'Cancel',
+    label: 'Cancel by',
     date: sub.cancelBy,
     days: life.daysUntilCancel,
     urgent: life.urgentCancel,
@@ -230,16 +230,73 @@ function dateStripHtml(sub, life) {
 
   const urgent = life.urgentTrial || life.urgentCharge || life.urgentCancel;
   return `
-    <div class="date-strip ${life.onTrial ? 'on-trial' : ''} ${urgent ? 'urgent' : ''}">
+    <section class="date-hero ${life.onTrial ? 'on-trial' : ''} ${urgent ? 'urgent' : ''}">
       ${cells.map((c) => `
-        <div class="date-cell ${c.urgent ? 'urgent' : ''}">
+        <div class="date-hero-cell ${c.urgent ? 'urgent' : ''}">
           <span>${c.label}</span>
-          <b>${niceDate(c.date)}</b>
-          <em>${c.days}d</em>
+          <strong>${niceDate(c.date)}</strong>
+          <em>${c.days} days</em>
         </div>
       `).join('')}
-    </div>
+    </section>
   `;
+}
+
+function statusBannerHtml(life, sub, currency) {
+  if (life.onTrial && life.urgentTrial) {
+    return `<p class="detail-banner urgent">Trial ends in ${life.trialDaysLeft} days — cancel before you're charged ${money(sub.price, currency)}</p>`;
+  }
+  if (life.urgentCancel) {
+    return `<p class="detail-banner urgent">Cancel within ${life.daysUntilCancel} days to avoid the next charge</p>`;
+  }
+  if (life.urgentCharge && !life.onTrial) {
+    return `<p class="detail-banner warn">Renews in ${life.daysUntilCharge} days · ${money(sub.price, currency)}</p>`;
+  }
+  if (life.onTrial) {
+    return `<p class="detail-banner trial">Free trial · first charge ${niceDate(sub.nextBill)}</p>`;
+  }
+  return '';
+}
+
+async function openSubEditSheet(sub, ctx, label) {
+  const history = sub.priceHistory || [];
+  await sheet({
+    title: `Edit ${label}`,
+    body: `
+      <form id="sub-edit-form" class="form-stack">
+        <label class="field"><span>Price</span><input name="price" type="number" min="0" step="0.01" value="${sub.price}" required /></label>
+        <div class="field-row">
+          <label class="field"><span>Next bill</span><input name="nextBill" type="date" value="${sub.nextBill}" required /></label>
+          <label class="field"><span>Cancel by</span><input name="cancelBy" type="date" value="${sub.cancelBy}" required /></label>
+        </div>
+        <label class="field"><span>Trial ends</span><input name="trialEnds" type="date" value="${sub.trialEnds || ''}" /></label>
+        ${history.length ? `
+          <div class="mini-history block">
+            <span class="current">${money(sub.price, sub.currency)} now</span>
+            ${history.map((h) => `<span>${niceDate(h.date)} ${money(h.price, sub.currency)}</span>`).join('')}
+          </div>
+        ` : ''}
+        <button class="btn primary block" type="submit">Save changes</button>
+      </form>
+    `,
+    actions: [{ id: 'cancel', label: 'Close' }],
+    onOpen(overlay) {
+      overlay.querySelector('#sub-edit-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        Store.updateSubscription(sub.id, {
+          price: Number(fd.get('price')),
+          nextBill: String(fd.get('nextBill')),
+          cancelBy: String(fd.get('cancelBy')),
+          trialEnds: String(fd.get('trialEnds') || '') || null,
+        });
+        toast('Saved');
+        checkReminders();
+        ctx.refresh();
+        overlay.querySelector('[data-x]')?.click();
+      });
+    },
+  });
 }
 
 function card(sub, currency) {
@@ -389,7 +446,7 @@ export function renderCatalog(root, ctx, catalogId) {
 
   if (!planId) {
     root.innerHTML = `
-      <div class="detail-view">
+      <div class="detail-view detail-view--scroll">
         <header class="detail-top">
           <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
           ${brandBadgeHtml({ icon: product.icon, color: product.color, url: product.url }, { lg: true })}
@@ -402,7 +459,8 @@ export function renderCatalog(root, ctx, catalogId) {
         ${product.valueTip ? `<p class="detail-hint">${esc(product.valueTip)}</p>` : ''}
         ${product.trialPolicy ? trialResearchHtml({ trialPolicy: product.trialPolicy }, 'monthly') : ''}
 
-        <div class="plan-picker">
+        <div class="detail-scroll-body">
+          <div class="plan-picker">
           ${[...product.plans].sort((a, b) => a.price - b.price).map((plan) => {
             const key = catalogKey(product.id, plan.id);
             const owned = s.subscriptions.some((x) => x.catalogId === key);
@@ -418,6 +476,7 @@ export function renderCatalog(root, ctx, catalogId) {
               </button>
             `;
           }).join('')}
+          </div>
         </div>
 
         ${product.pricingUrl || product.url ? `
@@ -455,7 +514,7 @@ export function renderCatalog(root, ctx, catalogId) {
     : addDaysISO(13);
 
   root.innerHTML = `
-    <div class="detail-view">
+    <div class="detail-view detail-view--scroll">
       <header class="detail-top">
         <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
         ${brandBadgeHtml({ icon: product.icon, color: product.color, url: product.url }, { lg: true })}
@@ -468,15 +527,16 @@ export function renderCatalog(root, ctx, catalogId) {
       ${entry.valueTip ? `<p class="detail-hint">${esc(entry.valueTip)}</p>` : ''}
       ${trialResearchHtml(entry, entry.cycle)}
 
-      <div class="link-row compact">
-        ${entry.url ? `<a class="text-link" href="${esc(entry.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}
-        ${entry.pricingUrl ? `<a class="text-link" href="${esc(entry.pricingUrl)}" target="_blank" rel="noopener">Pricing ↗</a>` : ''}
-      </div>
+      <div class="detail-scroll-body">
+        <div class="link-row compact">
+          ${entry.url ? `<a class="text-link" href="${esc(entry.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}
+          ${entry.pricingUrl ? `<a class="text-link" href="${esc(entry.pricingUrl)}" target="_blank" rel="noopener">Pricing ↗</a>` : ''}
+        </div>
 
-      ${owned ? `
-        <button type="button" class="btn primary block" data-owned>Open tracked sub</button>
-      ` : `
-        <form id="add" class="form-stack compact-form">
+        ${owned ? `
+          <button type="button" class="btn primary block" data-owned>Open tracked sub</button>
+        ` : `
+          <form id="add" class="form-stack compact-form">
           ${trialApplies(entry) ? `
             <label class="field checkbox-row trial-confirm">
               <input type="checkbox" id="useTrial" name="useTrial" checked />
@@ -499,6 +559,7 @@ export function renderCatalog(root, ctx, catalogId) {
           <button class="btn primary block" type="submit">Add to stack</button>
         </form>
       `}
+      </div>
     </div>
   `;
 
@@ -575,69 +636,33 @@ export function renderSubDetail(root, ctx, id) {
   const label = entry?.displayName || sub.name;
   const brand = getSubBranding(sub);
   const life = getSubLifecycle(sub);
-  const history = sub.priceHistory || [];
 
   root.innerHTML = `
-    <div class="detail-view">
-      <header class="detail-top">
-        <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
-        ${brandBadgeHtml(brand, { lg: true })}
-        <div>
-          <h1>${esc(label)}</h1>
-          <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
-        </div>
-      </header>
-
-      ${dateStripHtml(sub, life)}
-
-      ${history.length ? `
-        <details class="detail-fold">
-          <summary>Price history</summary>
-          <div class="mini-history">
-            <span class="current">${money(sub.price, sub.currency)} now</span>
-            ${history.map((h) => `<span>${niceDate(h.date)} ${money(h.price, sub.currency)}</span>`).join('')}
+    <div class="detail-view detail-view--screen">
+      <div class="detail-screen-top">
+        <header class="detail-top">
+          <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
+          ${brandBadgeHtml(brand, { lg: true })}
+          <div>
+            <h1>${esc(label)}</h1>
+            <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
           </div>
-        </details>
-      ` : ''}
+        </header>
 
-      ${sub.url || sub.trialSource ? `
-        <div class="link-row compact">
-          ${sub.url ? `<a class="text-link" href="${esc(sub.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}
-          ${sub.trialSource ? `<a class="text-link" href="${esc(sub.trialSource)}" target="_blank" rel="noopener">Trial policy ↗</a>` : ''}
-        </div>
-      ` : ''}
+        ${dateHeroHtml(sub, life)}
+        ${statusBannerHtml(life, sub, sub.currency)}
+      </div>
 
-      <details class="detail-fold">
-        <summary>Edit</summary>
-        <form id="edit" class="form-stack compact-form">
-          <label class="field"><span>Price</span><input name="price" type="number" min="0" step="0.01" value="${sub.price}" required /></label>
-          <div class="field-row">
-            <label class="field"><span>Next bill</span><input name="nextBill" type="date" value="${sub.nextBill}" required /></label>
-            <label class="field"><span>Cancel by</span><input name="cancelBy" type="date" value="${sub.cancelBy}" required /></label>
-          </div>
-          <label class="field"><span>Trial ends</span><input name="trialEnds" type="date" value="${sub.trialEnds || ''}" /></label>
-          <button class="btn primary block" type="submit">Save</button>
-        </form>
-        <button type="button" class="btn danger block" data-rm>Remove</button>
-      </details>
+      <div class="detail-screen-actions">
+        <button type="button" class="btn outline" data-edit>Edit</button>
+        ${sub.url ? `<a class="btn outline" href="${esc(sub.url)}" target="_blank" rel="noopener">Open site</a>` : ''}
+        <button type="button" class="btn danger" data-rm>Remove</button>
+      </div>
     </div>
   `;
 
   root.querySelector('[data-back]')?.addEventListener('click', () => ctx.back());
-
-  $('#edit', root)?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    Store.updateSubscription(sub.id, {
-      price: Number(fd.get('price')),
-      nextBill: String(fd.get('nextBill')),
-      cancelBy: String(fd.get('cancelBy')),
-      trialEnds: String(fd.get('trialEnds') || '') || null,
-    });
-    toast('Saved');
-    ctx.refresh();
-    checkReminders();
-  });
+  root.querySelector('[data-edit]')?.addEventListener('click', () => openSubEditSheet(sub, ctx, label));
 
   root.querySelector('[data-rm]')?.addEventListener('click', async () => {
     const ok = await confirmSheet({

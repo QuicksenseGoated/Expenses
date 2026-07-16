@@ -1,6 +1,7 @@
 import { Store } from './store.js';
 import { renderHome, openSpendSheet, openIncomeSheet } from './components/home.js';
 import { renderBills, renderCatalog, renderSubDetail } from './components/bills.js';
+import { syncOverviewFab } from './components/sub-overview.js';
 import { renderActivity } from './components/activity.js';
 import { renderCalendar } from './components/calendar.js';
 import { renderProfile } from './components/profile.js';
@@ -152,17 +153,20 @@ function paint() {
   document.title = `${TABS.find((t) => t.id === route)?.label || 'Financer'} · Financer`;
 
   const main = document.getElementById('main');
+  main.classList.toggle('overlay-mode', onOverlay);
   main.innerHTML = '';
   const view = document.createElement('div');
-  view.className = 'view';
+  view.className = `view${onOverlay ? ' overlay-fill' : ''}`;
   main.appendChild(view);
 
   if (overlay?.type === 'catalog') {
     renderCatalog(view, ctx, overlay.id);
+    syncOverviewFab(ctx, route, overlay);
     return;
   }
   if (overlay?.type === 'sub') {
     renderSubDetail(view, ctx, overlay.id);
+    syncOverviewFab(ctx, route, overlay);
     return;
   }
 
@@ -174,6 +178,7 @@ function paint() {
     profile: renderProfile
   };
   (map[route] || renderHome)(view, ctx);
+  syncOverviewFab(ctx, route, overlay);
 }
 
 boot();

@@ -66,7 +66,7 @@ export function toast(msg) {
   toast._t = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
-export function sheet({ title, body, actions = [] }) {
+export function sheet({ title, body, actions = [], onOpen = null }) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay';
@@ -79,6 +79,7 @@ export function sheet({ title, body, actions = [] }) {
       </div>
     `;
     document.body.appendChild(overlay);
+    onOpen?.(overlay);
     requestAnimationFrame(() => overlay.classList.add('open'));
     const close = (payload) => {
       overlay.classList.remove('open');
