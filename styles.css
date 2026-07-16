@@ -1989,6 +1989,28 @@ button.envelope {
 
 .empty-sm { margin: 0; color: var(--muted); font-size: 0.9rem; text-align: center; padding: 12px; }
 
+.boot-error {
+  max-width: 360px;
+  margin: 40px auto;
+  padding: 24px;
+  text-align: center;
+}
+
+.boot-error h1 {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  margin: 0 0 10px;
+}
+
+.boot-error p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.boot-error-hint { font-size: 0.82rem !important; }
+
 .banner {
   padding: 12px 14px;
   border-radius: var(--radius-sm);

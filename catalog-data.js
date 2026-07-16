@@ -302,20 +302,33 @@ export const PRODUCTS = [
     "url": "https://music.apple.com",
     "pricingUrl": "https://www.apple.com/apple-music",
     "why": "Apple's music library.",
-    "when": "Monthly.",
+    "when": "Monthly via Apple ID.",
     "how": "Settings → Subscriptions.",
+    "valueTip": "Student ($5.99) includes Apple TV+. Family ($16.99) for up to 6 people. New device buyers may get 3 months free instead of 1.",
     "plans": [
       {
         "id": "student",
         "name": "Student",
         "price": 5.99,
-        "cycle": "monthly"
+        "cycle": "monthly",
+        "trial": {
+          "days": 30,
+          "cycles": ["monthly"],
+          "source": "https://www.apple.com/apple-music/",
+          "note": "1-month free trial for eligible new Student subscribers (apple.com)."
+        }
       },
       {
         "id": "individual",
         "name": "Individual",
         "price": 10.99,
-        "cycle": "monthly"
+        "cycle": "monthly",
+        "trial": {
+          "days": 30,
+          "cycles": ["monthly"],
+          "source": "https://www.apple.com/apple-music/",
+          "note": "1-month free trial for eligible new Individual subscribers (apple.com)."
+        }
       },
       {
         "id": "family",
@@ -696,8 +709,14 @@ export const PRODUCTS = [
     "url": "https://chat.openai.com",
     "pricingUrl": "https://openai.com/chatgpt/pricing",
     "why": "OpenAI assistant — Plus, Pro, and team tiers.",
-    "when": "Monthly.",
+    "when": "Monthly only — no annual Plus plan.",
     "how": "chat.openai.com → Settings → Subscription.",
+    "trialPolicy": {
+      "status": "none",
+      "source": "https://help.openai.com/en/articles/8381046",
+      "note": "No standing on-demand free trial. Referral invites and limited partner promos only (duration varies by campaign)."
+    },
+    "valueTip": "Use Free for basics. Plus is $20/mo flat — no annual discount. Watch for referral invites or student/veteran promos before paying.",
     "plans": [
       {
         "id": "plus",
@@ -730,14 +749,27 @@ export const PRODUCTS = [
     "url": "https://claude.ai",
     "pricingUrl": "https://claude.com/pricing",
     "why": "Anthropic AI — Pro and Max usage tiers.",
-    "when": "Monthly.",
+    "when": "Monthly or annual (Pro).",
     "how": "claude.ai → Settings → Subscription.",
+    "trialPolicy": {
+      "status": "none",
+      "source": "https://support.claude.com/en/articles/8325606-what-is-the-pro-plan",
+      "note": "No standing free trial for Pro. Free tier available separately at claude.ai."
+    },
+    "valueTip": "Pro annual ($200/yr ≈ $17/mo) saves ~17% vs $20/mo. Max tiers are monthly-only — only upgrade if you hit Pro limits.",
     "plans": [
       {
         "id": "pro",
         "name": "Pro",
         "price": 20,
         "cycle": "monthly"
+      },
+      {
+        "id": "pro_annual",
+        "name": "Pro (annual)",
+        "price": 200,
+        "cycle": "yearly",
+        "blurb": "~$17/mo · save ~17%"
       },
       {
         "id": "max_5x",
@@ -1191,28 +1223,42 @@ export const PRODUCTS = [
     "icon": "✨",
     "color": "#113ccf",
     "url": "https://www.disneyplus.com",
-    "pricingUrl": "https://www.disneyplus.com/welcome/disney-hulu-espn-bundle-4-0",
+    "pricingUrl": "https://help.disneyplus.com/article/disneyplus-price",
     "why": "Disney, Marvel, Star Wars, Hulu & ESPN bundles.",
-    "when": "Monthly or annual.",
+    "when": "Monthly or annual (Premium).",
     "how": "disneyplus.com → Account → Subscription.",
+    "trialPolicy": {
+      "status": "none",
+      "source": "https://help.disneyplus.com/article/disneyplus-price",
+      "note": "Disney+ does not offer a free trial (official Help Center)."
+    },
+    "valueTip": "No trial — binge a month then cancel, or go annual Premium ($189.99/yr) to save ~16% vs monthly. Disney+Hulu bundle ($12.99/mo) beats two standalones.",
     "plans": [
       {
         "id": "ads",
-        "name": "Basic (with ads)",
-        "price": 9.99,
+        "name": "Disney+ (with ads)",
+        "price": 11.99,
         "cycle": "monthly"
       },
       {
         "id": "no_ads",
-        "name": "Premium",
-        "price": 15.99,
+        "name": "Disney+ Premium (no ads)",
+        "price": 18.99,
         "cycle": "monthly"
       },
       {
+        "id": "premium_annual",
+        "name": "Disney+ Premium (annual)",
+        "price": 189.99,
+        "cycle": "yearly",
+        "blurb": "~$15.83/mo · save ~16%"
+      },
+      {
         "id": "bundle",
-        "name": "Disney+, Hulu, ESPN+",
+        "name": "Disney+, Hulu, ESPN Select",
         "price": 19.99,
-        "cycle": "monthly"
+        "cycle": "monthly",
+        "blurb": "3-service bundle"
       }
     ],
     "billingAnchor": "signup_anniversary",
@@ -1714,12 +1760,19 @@ export const PRODUCTS = [
     "why": "AI pair programmer in your IDE.",
     "when": "Monthly per user.",
     "how": "github.com → Settings → Billing.",
+    "valueTip": "Try Copilot Free for light use. Pro has a one-time 30-day trial — cancel before day 30. Students/OSS maintainers may get Pro free.",
     "plans": [
       {
         "id": "pro",
         "name": "Copilot Pro",
         "price": 10,
-        "cycle": "monthly"
+        "cycle": "monthly",
+        "trial": {
+          "days": 30,
+          "cycles": ["monthly"],
+          "source": "https://docs.github.com/en/copilot/concepts/billing/billing-for-individuals",
+          "note": "One-time 30-day trial for Copilot Pro (payment method required). Pro+ has no trial."
+        }
       },
       {
         "id": "business",
@@ -2036,6 +2089,12 @@ export const PRODUCTS = [
     "why": "Current TV and originals.",
     "when": "Monthly.",
     "how": "hulu.com → Account → Manage plan.",
+    "trialPolicy": {
+      "status": "none",
+      "source": "https://thestreamable.com/hulu-ends-free-trial-disney-plus-app",
+      "note": "No free trial on standalone on-demand plans (Hulu confirmed to press). Live TV has a separate trial — see Live TV plan."
+    },
+    "valueTip": "Student plan ($1.99/mo) if eligible. Disney+Hulu bundle ($12.99/mo) often beats Hulu alone + Disney+.",
     "plans": [
       {
         "id": "ads",
@@ -2053,7 +2112,13 @@ export const PRODUCTS = [
         "id": "live",
         "name": "Live TV",
         "price": 76.99,
-        "cycle": "monthly"
+        "cycle": "monthly",
+        "trial": {
+          "days": 3,
+          "cycles": ["monthly"],
+          "source": "https://decider.com/2026/06/25/hulu-30-day-free-trial-hulu-plans-prices-subscription-cost-disney-bundle-free-trial/",
+          "note": "3-day free trial for Hulu + Live TV bundle (eligible new subscribers)."
+        }
       }
     ],
     "billingAnchor": "signup_anniversary",
@@ -2395,6 +2460,12 @@ export const PRODUCTS = [
     "why": "HBO, Warner Bros, and discovery content.",
     "when": "Monthly billing.",
     "how": "max.com → Settings → Subscription.",
+    "trialPolicy": {
+      "status": "none",
+      "source": "https://help.max.com/US-en/answer/detail/000002501",
+      "note": "No standing free trial at Max.com. Occasional 7-day promos via Prime Video Channels or other partners only."
+    },
+    "valueTip": "Disney+Hulu+HBO Max bundle ($19.99/mo with ads) saves vs three separate subs. Ad-supported solo plan is cheapest if you only want Max.",
     "plans": [
       {
         "id": "ads",
@@ -2728,7 +2799,8 @@ export const PRODUCTS = [
       "status": "none",
       "source": "https://help.netflix.com/en/node/16282",
       "note": "Netflix does not offer free trials (official Help Center)."
-    }
+    },
+    "valueTip": "Standard with ads ($8.99) is cheapest. No trial — subscribe monthly and cancel after a binge. Premium only if you need 4K or extra screens."
   },
   {
     "id": "netlify",
@@ -2872,14 +2944,27 @@ export const PRODUCTS = [
     "url": "https://www.notion.so",
     "pricingUrl": "https://www.notion.so/pricing",
     "why": "Notes, docs, and wikis.",
-    "when": "Monthly per seat.",
+    "when": "Monthly or annual per seat.",
     "how": "notion.so → Settings → Billing.",
+    "trialPolicy": {
+      "status": "none",
+      "source": "https://www.notion.com/pricing",
+      "note": "No standard Plus free trial. Plus includes a limited AI trial only. Students get free Plus with .edu email."
+    },
+    "valueTip": "Annual Plus ($10/seat/mo) saves 17% vs $12 monthly. Students/educators: free Plus via notion.com/help/notion-for-education.",
     "plans": [
       {
         "id": "plus",
         "name": "Plus",
-        "price": 10,
+        "price": 12,
         "cycle": "monthly"
+      },
+      {
+        "id": "plus_annual",
+        "name": "Plus (annual)",
+        "price": 120,
+        "cycle": "yearly",
+        "blurb": "$10/seat/mo · save 17%"
       },
       {
         "id": "business",
@@ -3762,6 +3847,7 @@ export const PRODUCTS = [
     "why": "Music and podcasts.",
     "when": "Monthly on billing date.",
     "how": "spotify.com → Account → Manage plan.",
+    "valueTip": "Student ($5.99) if eligible. Family ($19.99) covers 6 accounts — best per-person value. Use 30-day trial on monthly Individual/Student only.",
     "plans": [
       {
         "id": "student",
@@ -3915,6 +4001,7 @@ export const PRODUCTS = [
     "why": "Twitch clip editor — vertical exports, captions, and ClipGPT AI highlights.",
     "when": "Monthly or annual billing.",
     "how": "streamladder.com → Pricing → pick Silver, Gold, or Gold + ClipGPT.",
+    "valueTip": "Start monthly with 7-day trial to test. Annual saves ~20% if you clip weekly. ClipGPT credits are extra — Gold tier only if you need AI highlights.",
     "plans": [
       {
         "id": "silver",
@@ -3930,6 +4017,13 @@ export const PRODUCTS = [
         }
       },
       {
+        "id": "silver_annual",
+        "name": "Silver (annual)",
+        "price": 79.99,
+        "cycle": "yearly",
+        "blurb": "~$6.67/mo · save ~20%"
+      },
+      {
         "id": "gold",
         "name": "Gold",
         "price": 14.99,
@@ -3943,6 +4037,13 @@ export const PRODUCTS = [
         }
       },
       {
+        "id": "gold_annual",
+        "name": "Gold (annual)",
+        "price": 149.99,
+        "cycle": "yearly",
+        "blurb": "~$12.50/mo · save ~20%"
+      },
+      {
         "id": "gold_clipgpt",
         "name": "Gold + ClipGPT",
         "price": 26.99,
@@ -3954,6 +4055,13 @@ export const PRODUCTS = [
           "source": "https://www.streamladder.com/",
           "note": "7-day free trial for new users on paid monthly plans (official FAQ)."
         }
+      },
+      {
+        "id": "gold_clipgpt_annual",
+        "name": "Gold + ClipGPT (annual)",
+        "price": 269.99,
+        "cycle": "yearly",
+        "blurb": "~$22.50/mo · save ~20%"
       }
     ],
     "billingAnchor": "signup_anniversary",
@@ -4655,12 +4763,19 @@ export const PRODUCTS = [
     "why": "Ad-free YouTube and YouTube Music.",
     "when": "Monthly or annual.",
     "how": "youtube.com/paid_memberships.",
+    "valueTip": "Family ($22.99) if 3+ users. Check youtube.com/paid_memberships for your exact trial offer before subscribing.",
     "plans": [
       {
         "id": "individual",
         "name": "Individual",
         "price": 13.99,
-        "cycle": "monthly"
+        "cycle": "monthly",
+        "trial": {
+          "days": 30,
+          "cycles": ["monthly"],
+          "source": "https://support.google.com/youtube/answer/10324204",
+          "note": "Introductory trial for eligible first-time members (length shown at signup; typically ~1 month). One trial per payment method per 12 months."
+        }
       },
       {
         "id": "family",

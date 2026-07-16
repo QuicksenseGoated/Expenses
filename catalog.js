@@ -106,6 +106,7 @@ export function getCatalogEntry(catalogId) {
     blurb: plan?.blurb || sorted[0]?.blurb || "",
     trial: plan?.trial || null,
     trialPolicy: product.trialPolicy || null,
+    valueTip: plan?.valueTip || product.valueTip || null,
   };
 }
 

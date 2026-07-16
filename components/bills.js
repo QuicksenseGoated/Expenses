@@ -359,7 +359,7 @@ export function renderCatalog(root, ctx, catalogId) {
     root.innerHTML = `
       <header class="detail-top">
         <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
-        <div class="brand-badge lg" style="background:${esc(product.color || '#1e40af')}">${product.icon}</div>
+        ${brandBadgeHtml({ icon: product.icon, color: product.color, url: product.url }, { lg: true })}
         <div>
           <h1>${esc(product.name)}</h1>
           <p>${esc(catLabel)} · ${esc(planRangeLabel(product, s.currency))}</p>
@@ -370,7 +370,10 @@ export function renderCatalog(root, ctx, catalogId) {
         ${product.why ? `<article><h3>Why</h3><p>${esc(product.why)}</p></article>` : ''}
         ${product.when ? `<article><h3>When billed</h3><p>${esc(product.when)}</p></article>` : ''}
         ${product.billingAnchor ? `<article class="gold"><h3>Billing timing</h3><p><strong>${esc(anchorLabel(product.billingAnchor))}</strong>${product.billingSource ? ` — ${esc(product.billingSource)}` : ''}</p></article>` : ''}
+        ${product.valueTip ? `<article class="gold"><h3>Smart subscribe</h3><p>${esc(product.valueTip)}</p></article>` : ''}
       </section>
+
+      ${product.trialPolicy ? trialResearchHtml({ trialPolicy: product.trialPolicy }, 'monthly') : ''}
 
       <section class="panel">
         <h2>Choose your plan</h2>
@@ -414,6 +417,8 @@ export function renderCatalog(root, ctx, catalogId) {
     wireBrandBadges(root);
     return;
   }
+
+  const entry = getCatalogEntry(catalogId);
   if (!entry) return root.innerHTML = '<p class="empty-sm">Plan not found.</p>';
   const owned = s.subscriptions.find((x) => x.catalogId === entry.catalogId);
   const needsBillingDay = entry.billingAnchor === 'signup_anniversary' || entry.billingAnchor === 'app_store';
@@ -440,6 +445,7 @@ export function renderCatalog(root, ctx, catalogId) {
       ${entry.when ? `<article><h3>When to use</h3><p>${esc(entry.when)}</p></article>` : ''}
       ${entry.how ? `<article><h3>How to manage</h3><p>${esc(entry.how)}</p></article>` : ''}
       ${entry.billingAnchor ? `<article class="gold"><h3>Billing timing</h3><p><strong>${esc(anchorLabel(entry.billingAnchor))}</strong></p><p>${esc(anchorHint(entry.billingAnchor) || '')}</p>${entry.billingSource ? `<p class="tiny">Source: ${esc(entry.billingSource)}</p>` : ''}</article>` : ''}
+      ${entry.valueTip ? `<article class="gold"><h3>Smart subscribe</h3><p>${esc(entry.valueTip)}</p></article>` : ''}
     </section>
 
     <div class="link-row">
