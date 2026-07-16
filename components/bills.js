@@ -6,12 +6,13 @@ import {
   CATALOG_SIZE,
   getProduct,
   getCatalogEntry,
+  getSubBranding,
   catalogKey,
   priceLabel,
   planRangeLabel,
   parseCatalogKey,
 } from '../catalog.js';
-import { esc, money, niceDate, daysUntil, toast, initials, addDaysISO, $ } from './ui.js';
+import { esc, money, niceDate, daysUntil, toast, addDaysISO, $, sheet, confirmSheet } from './ui.js';
 import { anchorLabel, anchorHint, projectNextBill, projectCancelBy } from '../billing.js';
 
 const FEATURED = ['streamladder', 'netflix', 'spotify', 'claude', 'youtube_premium', 'disney'];
@@ -20,6 +21,7 @@ export function renderBills(root, ctx) {
   const s = Store.get();
   const mine = s.subscriptions;
   const total = Store.subsMonthly();
+  const nextDue = Store.upcomingBills(30)[0];
 
   root.innerHTML = `
     <header class="page-title">
@@ -28,9 +30,15 @@ export function renderBills(root, ctx) {
     </header>
 
     ${mine.length ? `
+      <div class="stack-summary">
+        <span><strong>${money(total, s.currency)}</strong>/mo</span>
+        <span>·</span>
+        <span>${mine.length} subs</span>
+        ${nextDue ? `<span>·</span><span>Next in ${nextDue.daysUntil}d</span>` : ''}
+      </div>
       <section class="panel flush-top">
         <div class="sub-grid">
-          ${mine.map((sub) => card(sub)).join('')}
+          ${mine.map((sub) => card(sub, s.currency)).join('')}
         </div>
       </section>
     ` : `
@@ -51,6 +59,7 @@ export function renderBills(root, ctx) {
           <button type="button" class="library-clear" id="clear" hidden aria-label="Clear search">×</button>
         </label>
         <p class="library-meta" id="meta"></p>
+        <button type="button" class="btn outline library-custom" data-custom>Add custom subscription</button>
       </div>
 
       <div class="chip-scroll" id="cats">
@@ -83,7 +92,7 @@ export function renderBills(root, ctx) {
         <div class="brand-badge" style="background:${esc(p.color || '#1e40af')}">${p.icon}</div>
         <div class="discover-main">
           <strong>${esc(p.name)}</strong>
-          <span>${esc(catLabel)} · ${esc(planRangeLabel(p))}</span>
+          <span>${esc(catLabel)} · ${esc(planRangeLabel(p, s.currency))}</span>
         </div>
         <span class="tag ${owned.length ? 'owned' : ''}">${owned.length ? `${owned.length} added` : 'Add'}</span>
       </button>
@@ -148,18 +157,25 @@ export function renderBills(root, ctx) {
     updateMeta(query, rows);
     paintFeatured();
 
-    if (!query && category === 'all') {
-      results.innerHTML = '';
-      results.hidden = true;
-      return;
-    }
-
+    const showAll = !query && category === 'all';
     results.hidden = false;
-    results.innerHTML = rows.length
-      ? rows.map((p) => productRow(p)).join('')
-      : `<p class="empty-sm">Try a different name or category.</p>`;
+
+    if (showAll) {
+      const featuredIds = new Set(FEATURED);
+      const all = searchProducts('', { category: 'all' }).filter((p) => !featuredIds.has(p.id));
+      results.innerHTML = `
+        <p class="library-section-label">All services</p>
+        ${all.map((p) => productRow(p)).join('')}
+      `;
+    } else {
+      results.innerHTML = rows.length
+        ? rows.map((p) => productRow(p)).join('')
+        : `<p class="empty-sm">Try a different name or category.</p>`;
+    }
     wireProductClicks(results);
   };
+
+  root.querySelector('[data-custom]')?.addEventListener('click', () => openCustomSubSheet(ctx, s));
 
   clearBtn.addEventListener('click', () => {
     q.value = '';
@@ -184,29 +200,78 @@ export function renderBills(root, ctx) {
   paint();
 }
 
-function card(sub) {
+function card(sub, currency) {
   const d = daysUntil(sub.nextBill);
   const urgent = d <= 3;
   const entry = getCatalogEntry(sub.catalogId);
   const label = entry?.displayName || sub.name;
+  const brand = getSubBranding(sub);
   return `
-    <button type="button" class="sub-card ${urgent ? 'urgent' : ''}" data-sub="${sub.id}">
+    <button type="button" class="sub-card ${urgent ? 'urgent' : ''}" data-sub="${sub.id}" style="--sub-accent:${esc(brand.color)}">
       <div class="sub-card-top">
-        <div class="brand-badge">${initials(label)}</div>
+        <div class="brand-badge" style="background:${esc(brand.color)}">${brand.icon}</div>
         <div>
           <strong>${esc(label)}</strong>
-          <span>${esc(sub.category)}</span>
+          <span>${esc(sub.category)}${sub.cycle === 'yearly' ? ' · yearly' : ''}</span>
         </div>
+        ${urgent ? '<span class="sub-urgent-pill">Due soon</span>' : ''}
       </div>
       <div class="sub-card-bottom">
         <div>
           <span class="tiny">Next bill</span>
           <b>${niceDate(sub.nextBill)}</b>
         </div>
-        <div class="price">${money(sub.price, sub.currency)}</div>
+        <div class="price">${money(sub.price, currency)}</div>
       </div>
     </button>
   `;
+}
+
+async function openCustomSubSheet(ctx, s) {
+  const result = await sheet({
+    title: 'Custom subscription',
+    body: `
+      <p class="sheet-hint">For services not in the catalog — gym, rent, anything recurring.</p>
+      <label class="field"><span>Name</span><input id="c-name" maxlength="60" placeholder="e.g. Gym membership" required /></label>
+      <label class="field"><span>Category</span>
+        <select id="c-cat">
+          ${CATEGORIES.map((c) => `<option value="${esc(c.label)}">${c.icon} ${esc(c.label)}</option>`).join('')}
+          <option value="Other">Other</option>
+        </select>
+      </label>
+      <label class="field"><span>Price</span><input id="c-price" type="number" min="0" step="0.01" required /></label>
+      <label class="field"><span>Billing cycle</span>
+        <select id="c-cycle">
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </label>
+      <label class="field"><span>Billing day (1–31)</span><input id="c-day" type="number" min="1" max="31" value="${new Date().getDate()}" /></label>
+      <label class="field"><span>Next bill</span><input id="c-next" type="date" value="${addDaysISO(14)}" required /></label>
+      <label class="field"><span>Cancel by</span><input id="c-cancel" type="date" value="${addDaysISO(13)}" required /></label>
+    `,
+    actions: [{ id: 'save', label: 'Add subscription', primary: true }],
+  });
+  if (result?.action !== 'save') return;
+  const o = result.overlay;
+  const name = String($('#c-name', o)?.value || '').trim();
+  const price = Number($('#c-price', o)?.value);
+  if (!name || !Number.isFinite(price)) return toast('Fill in name and price');
+  const day = Number($('#c-day', o)?.value) || new Date().getDate();
+  Store.addSubscription({
+    catalogId: `custom:${Date.now()}`,
+    name,
+    category: $('#c-cat', o)?.value || 'Other',
+    price,
+    currency: s.currency,
+    cycle: $('#c-cycle', o)?.value || 'monthly',
+    nextBill: String($('#c-next', o)?.value),
+    cancelBy: String($('#c-cancel', o)?.value),
+    billingAnchor: 'signup_anniversary',
+    billingDay: day,
+  });
+  toast('Added');
+  ctx.refresh();
 }
 
 export function renderCatalog(root, ctx, catalogId) {
@@ -224,7 +289,7 @@ export function renderCatalog(root, ctx, catalogId) {
         <div class="brand-badge lg" style="background:${esc(product.color || '#1e40af')}">${product.icon}</div>
         <div>
           <h1>${esc(product.name)}</h1>
-          <p>${esc(catLabel)} · ${esc(planRangeLabel(product))}</p>
+          <p>${esc(catLabel)} · ${esc(planRangeLabel(product, s.currency))}</p>
         </div>
       </header>
 
@@ -245,7 +310,7 @@ export function renderCatalog(root, ctx, catalogId) {
               <button type="button" class="plan-card ${owned ? 'owned' : ''}" data-plan="${plan.id}">
                 <div class="plan-card-top">
                   <strong>${esc(plan.name)}</strong>
-                  <span class="plan-price">${esc(priceLabel(plan.price, plan.cycle))}</span>
+                  <span class="plan-price">${esc(priceLabel(plan.price, plan.cycle, s.currency))}</span>
                 </div>
                 ${plan.blurb ? `<p>${esc(plan.blurb)}</p>` : ''}
                 <span class="tag ${owned ? 'owned' : ''}">${owned ? 'Tracking' : 'Select'}</span>
@@ -293,7 +358,7 @@ export function renderCatalog(root, ctx, catalogId) {
       <div class="brand-badge lg" style="background:${esc(product.color || '#1e40af')}">${product.icon}</div>
       <div>
         <h1>${esc(entry.displayName)}</h1>
-        <p>${esc(catLabel)} · ${esc(priceLabel(entry.price, entry.cycle))}</p>
+        <p>${esc(catLabel)} · ${esc(priceLabel(entry.price, entry.cycle, s.currency))}</p>
       </div>
     </header>
 
@@ -372,13 +437,14 @@ export function renderSubDetail(root, ctx, id) {
   if (!sub) return root.innerHTML = '<p class="empty-sm">Removed.</p>';
   const entry = getCatalogEntry(sub.catalogId);
   const label = entry?.displayName || sub.name;
+  const brand = getSubBranding(sub);
   const dBill = daysUntil(sub.nextBill);
   const dCancel = daysUntil(sub.cancelBy);
 
   root.innerHTML = `
     <header class="detail-top">
       <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
-      <div class="brand-badge lg">${initials(label)}</div>
+      <div class="brand-badge lg" style="background:${esc(brand.color)}">${brand.icon}</div>
       <div>
         <h1>${esc(label)}</h1>
         <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
@@ -438,8 +504,14 @@ export function renderSubDetail(root, ctx, id) {
     ctx.refresh();
   });
 
-  root.querySelector('[data-rm]')?.addEventListener('click', () => {
-    if (!confirm(`Stop tracking ${label}?`)) return;
+  root.querySelector('[data-rm]')?.addEventListener('click', async () => {
+    const ok = await confirmSheet({
+      title: 'Remove subscription',
+      body: `Stop tracking <strong>${esc(label)}</strong>? This won’t cancel the real service.`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     Store.removeSubscription(sub.id);
     toast('Removed');
     ctx.navigate('bills');

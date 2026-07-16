@@ -6,13 +6,14 @@ import { renderCalendar } from './components/calendar.js';
 import { renderProfile } from './components/profile.js';
 import { initInstallPrompt } from './components/install.js';
 import { TAB_ICONS } from './components/tab-icons.js';
+import { applyTheme } from './components/ui.js';
 
 const TABS = [
   { id: 'home', label: 'Home', icon: TAB_ICONS.home },
   { id: 'bills', label: 'Bills', icon: TAB_ICONS.bills },
   { id: 'spend', label: 'Spend', center: true },
   { id: 'calendar', label: 'Calendar', icon: TAB_ICONS.calendar },
-  { id: 'profile', label: 'You', icon: TAB_ICONS.profile }
+  { id: 'activity', label: 'Activity', icon: TAB_ICONS.activity },
 ];
 
 const root = document.getElementById('app');
@@ -67,7 +68,8 @@ const ctx = {
 };
 
 function boot() {
-  Store.get();
+  const s = Store.get();
+  applyTheme(s.settings?.theme || 'system');
   shell();
   paint();
   initInstallPrompt();

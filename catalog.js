@@ -183,22 +183,37 @@ function scoreProduct(product, tokens) {
   return score;
 }
 
-export function priceLabel(price, cycle = "monthly") {
-  if (price == null || price <= 0) return "Free";
-  const sym = "$";
-  const amt = Number(price).toFixed(price % 1 ? 2 : 0);
-  const per = cycle === "yearly" ? "/yr" : "/mo";
-  return `${sym}${amt}${per}`;
+export function priceLabel(price, cycle = 'monthly', currency = '$') {
+  if (price == null || price <= 0) return 'Free';
+  const amt = Number(price).toFixed(Number(price) % 1 ? 2 : 0);
+  const per = cycle === 'yearly' ? '/yr' : '/mo';
+  return `${currency}${amt}${per}`;
 }
 
-export function planRangeLabel(product) {
+export function planRangeLabel(product, currency = '$') {
   const prices = (product.plans || []).map((p) => p.price).filter((n) => n > 0);
-  if (!prices.length) return "—";
+  if (!prices.length) return '—';
   const min = Math.min(...prices);
   const max = Math.max(...prices);
-  const cycle = product.plans.find((pl) => pl.price === min)?.cycle || "monthly";
-  if (min === max) return priceLabel(min, cycle);
-  return `${priceLabel(min, cycle)} – ${priceLabel(max)}`;
+  const cycle = product.plans.find((pl) => pl.price === min)?.cycle || 'monthly';
+  if (min === max) return priceLabel(min, cycle, currency);
+  const maxCycle = product.plans.find((pl) => pl.price === max)?.cycle || cycle;
+  return `${priceLabel(min, cycle, currency)} – ${priceLabel(max, maxCycle, currency)}`;
+}
+
+/** Brand icon/color for a tracked subscription. */
+export function getSubBranding(sub) {
+  const entry = getCatalogEntry(sub.catalogId);
+  if (entry?.icon) {
+    return { icon: entry.icon, color: entry.color || '#1e40af' };
+  }
+  if (String(sub.catalogId || '').startsWith('custom:')) {
+    return { icon: '📌', color: '#64748b' };
+  }
+  const { productId } = parseCatalogKey(sub.catalogId);
+  const product = getProduct(productId);
+  if (product) return { icon: product.icon, color: product.color || '#1e40af' };
+  return { icon: '📦', color: '#1e40af' };
 }
 
 export const PRODUCT_COUNT = PRODUCTS.length;

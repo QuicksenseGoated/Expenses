@@ -1,5 +1,6 @@
 import { Store } from '../store.js';
-import { greeting, money, niceDate, esc, toast, sheet, $ } from './ui.js';
+import { greeting, money, niceDate, esc, toast, sheet, $, applyTheme } from './ui.js';
+import { TAB_ICONS } from './tab-icons.js';
 
 const SECTIONS = [
   { id: 'paycheck', label: 'Paycheck radar', desc: 'Bills before payday' },
@@ -34,7 +35,10 @@ export function renderHome(root, ctx) {
           <h1 class="logo-word">Financer</h1>
         </div>
       </div>
-      <button type="button" class="icon-btn soft" data-customize aria-label="Customize home">⚙</button>
+      <div class="topbar-actions">
+        <button type="button" class="icon-btn soft" data-profile aria-label="Account">${TAB_ICONS.profile}</button>
+        <button type="button" class="icon-btn soft" data-customize aria-label="Customize home">⚙</button>
+      </div>
     </header>
 
     <section class="balance-card">
@@ -76,6 +80,7 @@ export function renderHome(root, ctx) {
   });
 
   root.querySelector('[data-customize]')?.addEventListener('click', () => openCustomizeSheet(ctx));
+  root.querySelector('[data-profile]')?.addEventListener('click', () => ctx.navigate('profile'));
   root.querySelector('[data-setup]')?.addEventListener('click', () => openBalanceSheet(ctx));
   root.querySelector('[data-edit]')?.addEventListener('click', () => openBalanceSheet(ctx, s.balance));
   root.querySelector('[data-spend]')?.addEventListener('click', () => ctx.openSpend());
@@ -112,6 +117,13 @@ export async function openCustomizeSheet(ctx) {
         <input type="checkbox" id="c-hide" ${settings.hideBalance ? 'checked' : ''} />
         <span>Hide balance on home</span>
       </label>
+      <label class="field"><span>Theme</span>
+        <select id="c-theme">
+          <option value="system" ${(settings.theme || 'system') === 'system' ? 'selected' : ''}>System</option>
+          <option value="light" ${settings.theme === 'light' ? 'selected' : ''}>Light</option>
+          <option value="dark" ${settings.theme === 'dark' ? 'selected' : ''}>Dark</option>
+        </select>
+      </label>
     `,
     actions: [{ id: 'save', label: 'Done', primary: true }],
   });
@@ -125,9 +137,11 @@ export async function openCustomizeSheet(ctx) {
     displayName: String($('#c-name', overlay)?.value || '').trim(),
     paydayDay: payday ? Number(payday) : null,
     hideBalance: $('#c-hide', overlay)?.checked || false,
+    theme: $('#c-theme', overlay)?.value || 'system',
     homeWidgets: [...new Set(picked)],
   });
   Store.setCurrency($('#c-currency', overlay)?.value || s.currency);
+  applyTheme($('#c-theme', overlay)?.value || 'system');
   toast('Home updated');
   ctx.refresh();
 }
@@ -215,9 +229,10 @@ function renderRecent(slot, ctx, s) {
             </div>
           `).join('')}
         </div>
-      ` : `<p class="empty-sm">No spends logged yet.</p>`}
+      ` : `<p class="empty-sm">No spends yet. <button type="button" class="link-btn" data-spend>Log one</button></p>`}
     </section>`;
   slot.querySelector('[data-go]')?.addEventListener('click', () => ctx.navigate('activity'));
+  slot.querySelector('[data-spend]')?.addEventListener('click', () => ctx.openSpend());
 }
 
 function renderSubsAudit(slot, ctx, s) {
