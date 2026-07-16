@@ -6,7 +6,21 @@ import { enableNotifications, notificationsSupported, checkReminders, registerBa
 import { runOnboarding } from './onboarding.js';
 import { encryptJson, decryptJson, cryptoSupported } from './crypto.js';
 
-const APP_VERSION = '28';
+const APP_VERSION = '29';
+
+async function hardRefreshApp() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+  } catch { /* ignore */ }
+  window.location.reload();
+}
 
 export function renderProfile(root, ctx) {
   const s = Store.get();
@@ -88,6 +102,8 @@ export function renderProfile(root, ctx) {
 
     <section class="panel">
       <h2>App</h2>
+      <p class="panel-sub">Stuck on an old layout? Tap below to pull the latest version.</p>
+      <button type="button" class="btn outline block" data-refresh-app>Refresh app</button>
       <p class="panel-sub">Wrong icon on your home screen? Delete the shortcut, reopen the site, and Add to Home Screen again.</p>
     </section>
 
@@ -147,6 +163,8 @@ export function renderProfile(root, ctx) {
     }
     e.target.value = '';
   });
+
+  root.querySelector('[data-refresh-app]')?.addEventListener('click', () => hardRefreshApp());
 
   root.querySelector('[data-reset]')?.addEventListener('click', async () => {
     const ok = await confirmSheet({

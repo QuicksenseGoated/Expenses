@@ -1,4 +1,4 @@
-const VERSION = 'financer-v28';
+const VERSION = 'financer-v29';
 const LEGACY_CACHES = [
   'sense-desk-v3.3',
   'sense-desk-v3',
@@ -27,7 +27,8 @@ const LEGACY_CACHES = [
   'financer-v24',
   'financer-v25',
   'financer-v26',
-  'financer-v27'
+  'financer-v27',
+  'financer-v28'
 ];
 
 const PRECACHE = [
@@ -58,7 +59,8 @@ const PRECACHE = [
   './components/reminder-db.js',
   './components/crypto.js',
   './components/install.js',
-  './components/tab-icons.js'
+  './components/tab-icons.js',
+  './components/sub-overview.js'
 ];
 
 const NETWORK_FIRST = [
@@ -68,7 +70,9 @@ const NETWORK_FIRST = [
   '/icons/',
   'index.html',
   'manifest.webmanifest',
-  'sw.js'
+  'sw.js',
+  'styles.css',
+  'catalog-data.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -197,8 +201,8 @@ async function runOfflineReminders() {
 
 function isNetworkFirst(url) {
   if (NETWORK_FIRST.some((part) => url.includes(part))) return true;
-  // Always fetch JS fresh — avoids stale SW serving broken modules after updates
-  if (/\.js(\?|$)/.test(url)) return true;
+  // Always fetch code + styles fresh — stale SW cache caused missed updates on phones
+  if (/\.(js|css)(\?|$)/.test(url)) return true;
   return false;
 }
 
