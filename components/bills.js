@@ -210,54 +210,6 @@ export function renderBills(root, ctx) {
   paint();
 }
 
-function dateHeroHtml(sub, life) {
-  const cells = [];
-  if (life.onTrial) {
-    cells.push({ label: 'Trial ends', date: sub.trialEnds, days: life.trialDaysLeft, urgent: life.urgentTrial });
-  }
-  cells.push({
-    label: life.onTrial ? 'First charge' : 'Renews',
-    date: sub.nextBill,
-    days: life.daysUntilCharge,
-    urgent: !life.onTrial && life.urgentCharge,
-  });
-  cells.push({
-    label: 'Cancel by',
-    date: sub.cancelBy,
-    days: life.daysUntilCancel,
-    urgent: life.urgentCancel,
-  });
-
-  const urgent = life.urgentTrial || life.urgentCharge || life.urgentCancel;
-  return `
-    <section class="date-hero ${life.onTrial ? 'on-trial' : ''} ${urgent ? 'urgent' : ''}">
-      ${cells.map((c) => `
-        <div class="date-hero-cell ${c.urgent ? 'urgent' : ''}">
-          <span>${c.label}</span>
-          <strong>${niceDate(c.date)}</strong>
-          <em>${c.days} days</em>
-        </div>
-      `).join('')}
-    </section>
-  `;
-}
-
-function statusBannerHtml(life, sub, currency) {
-  if (life.onTrial && life.urgentTrial) {
-    return `<p class="detail-banner urgent">Trial ends in ${life.trialDaysLeft} days — cancel before you're charged ${money(sub.price, currency)}</p>`;
-  }
-  if (life.urgentCancel) {
-    return `<p class="detail-banner urgent">Cancel within ${life.daysUntilCancel} days to avoid the next charge</p>`;
-  }
-  if (life.urgentCharge && !life.onTrial) {
-    return `<p class="detail-banner warn">Renews in ${life.daysUntilCharge} days · ${money(sub.price, currency)}</p>`;
-  }
-  if (life.onTrial) {
-    return '';
-  }
-  return '';
-}
-
 function trialProgress(sub) {
   if (!sub.trialEnds || !sub.startedAt) return null;
   const start = new Date(`${sub.startedAt}T12:00:00`);
@@ -269,106 +221,73 @@ function trialProgress(sub) {
   return { pct, day: Math.min(elapsed + 1, total), total };
 }
 
-function subDetailBodyHtml(sub, life, entry, brand, currency) {
+function subStatusNote(life, sub, currency) {
+  if (life.onTrial && life.urgentTrial) {
+    return `Trial ends in ${life.trialDaysLeft} days — cancel before ${money(sub.price, currency)}`;
+  }
+  if (life.urgentCancel) {
+    return `Cancel within ${life.daysUntilCancel} days to avoid charge`;
+  }
+  if (life.urgentCharge && !life.onTrial) {
+    return `Renews in ${life.daysUntilCharge} days`;
+  }
+  return '';
+}
+
+function subDetailPanelHtml(sub, life, entry, currency) {
   const monthly = monthlyEquivalent(sub.price, sub.cycle);
   const yearly = monthly * 12;
   const stackTotal = Store.subsMonthly();
   const stackShare = stackTotal > 0 ? Math.round((monthly / stackTotal) * 100) : 0;
-  const allSubs = Store.get().subscriptions;
-  const stackRank = allSubs.length;
   const progress = life.onTrial ? trialProgress(sub) : null;
-  const accent = brand.color || '#1e40af';
+  const note = subStatusNote(life, sub, currency);
+  const urgent = life.urgentTrial || life.urgentCancel || life.urgentCharge;
 
-  const timelineSteps = [];
+  const dates = [];
   if (life.onTrial && sub.trialEnds) {
-    timelineSteps.push({ label: 'Trial ends', date: sub.trialEnds, days: life.trialDaysLeft, tone: life.urgentTrial ? 'urgent' : 'trial' });
+    dates.push({ label: 'Trial ends', date: sub.trialEnds, days: life.trialDaysLeft, mark: life.urgentTrial ? 'urgent' : 'trial' });
   }
-  timelineSteps.push({
+  dates.push({
     label: 'Cancel by',
     date: sub.cancelBy,
     days: life.daysUntilCancel,
-    tone: life.urgentCancel ? 'urgent' : 'neutral',
+    mark: life.urgentCancel ? 'urgent' : '',
   });
-  timelineSteps.push({
+  dates.push({
     label: life.onTrial ? 'First charge' : 'Renews',
     date: sub.nextBill,
     days: life.daysUntilCharge,
-    tone: life.urgentCharge ? 'urgent' : 'charge',
+    mark: life.urgentCharge && !life.onTrial ? 'urgent' : 'charge',
   });
 
-  return `
-    <div class="sub-detail-body">
-      <div class="spotlight-card" style="--spot:${esc(accent)}">
-        <div class="spotlight-main">
-          <span class="spotlight-label">${life.onTrial ? 'After trial' : 'Per cycle'}</span>
-          <strong class="spotlight-price">${money(sub.price, currency)}</strong>
-          <span class="spotlight-cycle">${esc(sub.cycle)}</span>
-        </div>
-        <div class="spotlight-side">
-          <div class="spotlight-stat">
-            <span>Yearly est.</span>
-            <b>${money(yearly, currency)}</b>
-          </div>
-          <div class="spotlight-stat">
-            <span>Of your stack</span>
-            <b>${stackShare}%</b>
-          </div>
-        </div>
-      </div>
+  const meta = [
+    sub.category || entry?.category,
+    `${money(yearly, currency)}/yr`,
+    stackShare ? `${stackShare}% of stack` : null,
+    life.onTrial ? 'On trial' : null,
+  ].filter(Boolean).join(' · ');
 
+  return `
+    <section class="sub-card ${life.onTrial ? 'on-trial' : ''} ${urgent ? 'urgent' : ''}">
       ${progress ? `
-        <div class="trial-meter ${life.urgentTrial ? 'urgent' : ''}">
-          <div class="trial-meter-head">
-            <span>Trial progress</span>
-            <b>Day ${progress.day} of ${progress.total}</b>
-          </div>
-          <div class="trial-meter-track"><div class="trial-meter-fill" style="width:${progress.pct}%"></div></div>
-          <p>${life.trialDaysLeft} days left · then ${money(sub.price, currency)}/${esc(sub.cycle)}</p>
+        <div class="sub-trial">
+          <div class="sub-trial-track"><i style="width:${progress.pct}%"></i></div>
+          <span>Day ${progress.day} of ${progress.total} · ${life.trialDaysLeft}d left</span>
         </div>
       ` : ''}
-
-      <div class="sub-timeline" style="--steps:${timelineSteps.length}">
-        <div class="sub-timeline-rail"></div>
-        ${timelineSteps.map((step) => `
-          <div class="sub-timeline-step ${step.tone}">
-            <div class="sub-timeline-dot"></div>
-            <span class="sub-timeline-label">${step.label}</span>
-            <strong>${niceDate(step.date)}</strong>
-            <em>${step.days}d</em>
+      <div class="sub-dates cols-${dates.length}">
+        ${dates.map((d) => `
+          <div class="sub-date ${d.mark}">
+            <span>${d.label}</span>
+            <strong>${niceDate(d.date)}</strong>
+            <em>${d.days}d</em>
           </div>
         `).join('')}
       </div>
-
-      <div class="fact-grid">
-        <div class="fact-cell">
-          <span>Category</span>
-          <b>${esc(sub.category || entry?.category || '—')}</b>
-        </div>
-        <div class="fact-cell">
-          <span>Monthly eq.</span>
-          <b>${money(monthly, currency)}</b>
-        </div>
-        <div class="fact-cell">
-          <span>In your stack</span>
-          <b>${stackRank} tracked</b>
-        </div>
-        <div class="fact-cell">
-          <span>Status</span>
-          <b class="fact-status ${life.onTrial ? 'trial' : life.urgentCancel || life.urgentCharge ? 'urgent' : 'ok'}">${life.onTrial ? 'On trial' : life.urgentCancel ? 'Cancel soon' : life.urgentCharge ? 'Due soon' : 'Active'}</b>
-        </div>
-      </div>
-
-      ${entry?.valueTip ? `
-        <div class="detail-insight">
-          <span class="detail-insight-icon">💡</span>
-          <p>${esc(entry.valueTip)}</p>
-        </div>
-      ` : ''}
-
-      ${sub.trialSource ? `
-        <a class="detail-link-row" href="${esc(sub.trialSource)}" target="_blank" rel="noopener">Trial policy · official source ↗</a>
-      ` : ''}
-    </div>
+      ${note ? `<p class="sub-note ${urgent ? 'urgent' : ''}">${note}</p>` : ''}
+    </section>
+    ${meta ? `<p class="sub-meta">${esc(meta)}</p>` : ''}
+    ${sub.trialSource ? `<a class="sub-link" href="${esc(sub.trialSource)}" target="_blank" rel="noopener">Trial policy ↗</a>` : ''}
   `;
 }
 
@@ -753,28 +672,21 @@ export function renderSubDetail(root, ctx, id) {
   const accent = brand.color || '#1e40af';
 
   root.innerHTML = `
-    <div class="sub-detail detail-view detail-view--screen" style="--accent:${esc(accent)}">
-      <div class="sub-detail-band" aria-hidden="true"></div>
+    <div class="sub-page detail-view--screen" style="--accent:${esc(accent)}">
+      <header class="sub-head">
+        <button type="button" class="icon-btn" data-back aria-label="Back">←</button>
+        ${brandBadgeHtml(brand, { lg: true })}
+        <div class="sub-head-text">
+          <h1>${esc(label)}</h1>
+          <p>${money(sub.price, sub.currency)} <span>/ ${esc(sub.cycle)}</span></p>
+        </div>
+      </header>
 
-      <div class="sub-detail-top">
-        <header class="detail-top detail-top--brand">
-          <button type="button" class="icon-btn icon-btn--glass" data-back aria-label="Back">←</button>
-          ${brandBadgeHtml(brand, { lg: true })}
-          <div>
-            <h1>${esc(label)}</h1>
-            <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
-          </div>
-        </header>
+      ${subDetailPanelHtml(sub, life, entry, sub.currency)}
 
-        ${dateHeroHtml(sub, life)}
-        ${statusBannerHtml(life, sub, sub.currency)}
-      </div>
-
-      ${subDetailBodyHtml(sub, life, entry, brand, sub.currency)}
-
-      <div class="detail-screen-actions">
+      <div class="sub-actions">
         <button type="button" class="btn outline" data-edit>Edit</button>
-        ${sub.url ? `<a class="btn outline" href="${esc(sub.url)}" target="_blank" rel="noopener">Open site</a>` : ''}
+        ${sub.url ? `<a class="btn outline" href="${esc(sub.url)}" target="_blank" rel="noopener">Website</a>` : ''}
         <button type="button" class="btn danger" data-rm>Remove</button>
       </div>
     </div>
