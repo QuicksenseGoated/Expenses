@@ -1,4 +1,4 @@
-const CACHE = 'sense-desk-v3.2';
+const CACHE = 'sense-desk-v3.3';
 const ASSETS = [
   './',
   './index.html',

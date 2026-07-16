@@ -1,7 +1,9 @@
-import { CLIENT, FOCUS_PLAYS, dayPlan, IDEAS } from '../facts.js';
+import { CLIENT, FOCUS_PLAYS, dayPlan, FORMATS, formatById } from '../facts.js';
 import { Storage } from '../storage.js';
-import { quotaLine, recommendTag, postingStreak, delta, needsViews, weekReview } from '../analytics.js';
-import { escapeHtml } from './modal.js';
+import {
+  quotaLine, postingStreak, delta, needsViews, weekReview, recommendFormatTag
+} from '../analytics.js';
+import { escapeHtml, openModal } from './modal.js';
 import { quickLog, updateViews } from './log.js';
 
 export function renderToday(root, ctx) {
@@ -12,10 +14,9 @@ export function renderToday(root, ctx) {
   const focus = FOCUS_PLAYS.find((p) => p.id === focusId) || FOCUS_PLAYS[0];
   const score = Storage.getScore();
   const posts = Storage.getPosts();
+  const runs = Storage.getFormatRuns();
   const quota = quotaLine(posts);
   const streak = postingStreak(posts);
-  const tag = recommendTag(posts);
-  const pick = IDEAS.filter((i) => i.tag === tag)[0];
   const raids = Storage.getRaids();
   const todayRaid = Storage.getTodayRaid();
   const pending = needsViews(posts, 5);
@@ -23,28 +24,53 @@ export function renderToday(root, ctx) {
   const acvDelta = delta(score.history, 'twitchAcv');
   const ttDelta = delta(score.history, 'tiktokViewsWeek');
 
+  const tonightId = Storage.getTonightFormat();
+  const tag = recommendFormatTag(runs, plan.mode);
+  const custom = Storage.getCustomFormats();
+  const pool = [...custom, ...FORMATS];
+  let format = (tonightId && (formatById(tonightId) || custom.find((f) => f.id === tonightId))) || null;
+  if (!format) format = pool.find((f) => f.tag === tag) || pool[0];
+
   root.innerHTML = `
     <section class="view">
       <header class="view-header">
         <div>
           <p class="eyebrow">${escapeHtml(CLIENT.name)}</p>
           <h1>${escapeHtml(plan.title)}</h1>
-          <p class="sub">${escapeHtml(plan.iso)} · ${escapeHtml(plan.mode)}</p>
+          <p class="sub">${escapeHtml(plan.iso)} · ${escapeHtml(plan.mode)} · shorts via Streamladder</p>
         </div>
-        <button type="button" class="btn primary" data-quick-log>Log post</button>
+        <button type="button" class="btn ghost" data-quick-log>Log TT post</button>
       </header>
 
       <div class="kpi-row four">
         <div class="kpi"><span>ACV</span><strong>${fmt(score.twitchAcv)}</strong><em>${deltaTxt(acvDelta)}</em></div>
         <div class="kpi"><span>TT / wk</span><strong>${fmt(score.tiktokViewsWeek)}</strong><em>${deltaTxt(ttDelta)}</em></div>
-        <div class="kpi"><span>Week posts</span><strong class="q-${quota.status}">${quota.weekCount}/${quota.target}</strong><em>today ${quota.todayCount}</em></div>
-        <div class="kpi"><span>Streak</span><strong>${streak}d</strong><em>days logged</em></div>
+        <div class="kpi"><span>Ladder posts</span><strong class="q-${quota.status}">${quota.weekCount}/${quota.target}</strong><em>logged</em></div>
+        <div class="kpi"><span>Formats ran</span><strong>${runs.filter((r) => r.date >= weekStart()).length}</strong><em>this week</em></div>
       </div>
       <div class="quota-bar"><i style="width:${quota.pct}%"></i></div>
 
       ${review ? reviewBlock(review) : ''}
 
-      <section class="panel">
+      ${plan.mode !== 'review' && format ? `
+        <section class="panel format-tonight">
+          <div class="panel-head">
+            <h2>Tonight’s format</h2>
+            <span class="tag">${escapeHtml(format.tag)}</span>
+          </div>
+          <h3 class="ship-hook">${escapeHtml(format.title)}</h3>
+          <p class="why">${escapeHtml(format.pitch)}</p>
+          <p class="use"><strong>Title:</strong> ${escapeHtml(format.titleExample || format.title)}</p>
+          <ol class="steps tight">${(format.run || []).slice(0, 4).map((s) => `<li>${escapeHtml(s)}</li>`).join('')}</ol>
+          <div class="row-actions" style="margin-top:0.65rem">
+            <button type="button" class="btn primary" data-ran>Ran it</button>
+            <button type="button" class="btn ghost" data-copy-title>Copy title</button>
+            <button type="button" class="text-btn" data-go="ideas">All formats</button>
+          </div>
+        </section>
+      ` : ''}
+
+      <section class="panel" style="margin-top:0.85rem">
         <div class="panel-head"><h2>Do today</h2><span class="faint">${done}/${plan.actions.length}</span></div>
         <ul class="action-check">
           ${plan.actions.map((a, i) => `
@@ -57,24 +83,6 @@ export function renderToday(root, ctx) {
           `).join('')}
         </ul>
       </section>
-
-      ${plan.mode !== 'review' ? `
-        <section class="panel" style="margin-top:0.85rem">
-          <div class="panel-head">
-            <h2>Ship next</h2>
-            <span class="tag">${escapeHtml(tag)}</span>
-          </div>
-          ${pick ? `
-            <h3 class="ship-hook">${escapeHtml(pick.hook)}</h3>
-            <p class="why">${escapeHtml(pick.why)}</p>
-            <div class="row-actions" style="margin-top:0.65rem">
-              <button type="button" class="btn ghost" data-copy-ship>Copy caption</button>
-              <button type="button" class="btn primary" data-log-ship>Log as posted</button>
-              <button type="button" class="text-btn" data-go="ideas">More</button>
-            </div>
-          ` : ''}
-        </section>
-      ` : ''}
 
       <section class="panel" style="margin-top:0.85rem">
         <div class="panel-head">
@@ -102,15 +110,12 @@ export function renderToday(root, ctx) {
 
       ${pending.length ? `
         <section class="panel" style="margin-top:0.85rem">
-          <div class="panel-head"><h2>Needs views</h2><span class="faint">${pending.length}</span></div>
+          <div class="panel-head"><h2>Ladder posts need views</h2></div>
           <ul class="post-list compact">
             ${pending.map((p) => `
               <li>
-                <div>
-                  <strong>${escapeHtml(p.title)}</strong>
-                  <span>${escapeHtml(p.date)} · ${escapeHtml(p.tag || p.platform)}</span>
-                </div>
-                <button type="button" class="btn ghost" data-views="${p.id}">Add views</button>
+                <div><strong>${escapeHtml(p.title)}</strong><span>${escapeHtml(p.date)}</span></div>
+                <button type="button" class="btn ghost" data-views="${p.id}">Add</button>
               </li>
             `).join('')}
           </ul>
@@ -145,50 +150,71 @@ export function renderToday(root, ctx) {
     b.addEventListener('click', () => ctx.navigate(b.dataset.go));
   });
 
-  root.querySelector('[data-copy-ship]')?.addEventListener('click', async () => {
+  root.querySelector('[data-copy-title]')?.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(pick.caption);
-      ctx.toast('Copied');
+      await navigator.clipboard.writeText(format.titleExample || format.title);
+      ctx.toast('Title copied');
     } catch {
       ctx.toast('Copy failed');
     }
   });
 
-  root.querySelector('[data-log-ship]')?.addEventListener('click', () => {
-    quickLog(ctx, { title: pick.hook, tag: pick.tag, ideaId: pick.id });
+  root.querySelector('[data-ran]')?.addEventListener('click', () => {
+    openModal({
+      title: `Ran: ${format.title}`,
+      bodyHtml: `
+        <form id="fr" class="form-stack">
+          <label class="field"><span>ACV</span><input type="number" min="0" name="acv" value="${score.twitchAcv ?? ''}" /></label>
+          <label class="field"><span>Note</span><input name="note" placeholder="repeat / meh / banger" /></label>
+        </form>
+      `,
+      footerHtml: `<button type="button" class="btn ghost" data-x>Cancel</button><button type="button" class="btn primary" data-s>Save</button>`,
+      onMount(modal, close) {
+        modal.querySelector('[data-x]')?.addEventListener('click', close);
+        modal.querySelector('[data-s]')?.addEventListener('click', () => {
+          const fd = new FormData(modal.querySelector('#fr'));
+          Storage.addFormatRun({
+            formatId: format.id,
+            title: format.title,
+            tag: format.tag,
+            acv: fd.get('acv') === '' ? null : Number(fd.get('acv')),
+            note: String(fd.get('note') || '').trim()
+          });
+          ctx.toast('Format logged');
+          close();
+          ctx.refresh();
+        });
+      }
+    });
   });
 
   root.querySelector('[data-quick-log]')?.addEventListener('click', () => quickLog(ctx, {}));
 
   root.querySelectorAll('[data-views]').forEach((b) => {
-    b.addEventListener('click', () => {
-      updateViews(ctx, posts.find((p) => p.id === b.dataset.views));
-    });
+    b.addEventListener('click', () => updateViews(ctx, posts.find((p) => p.id === b.dataset.views)));
   });
+}
+
+function weekStart() {
+  const x = new Date();
+  x.setHours(12, 0, 0, 0);
+  const day = x.getDay();
+  x.setDate(x.getDate() + (day === 0 ? -6 : 1 - day));
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
 }
 
 function reviewBlock(r) {
   if (r.empty) {
-    return `<section class="panel review-panel"><h2>Week review</h2><p class="why">No posts logged this week. Start logging or the desk can’t steer.</p></section>`;
+    return `<section class="panel review-panel"><h2>Week review</h2><p class="why">No Ladder posts logged. Still mark formats you ran.</p></section>`;
   }
   return `
     <section class="panel review-panel">
       <h2>Week review</h2>
-      <p class="fact"><strong>Next week:</strong> ${escapeHtml(r.nextWeek)}</p>
+      <p class="fact"><strong>Next:</strong> ${escapeHtml(r.nextWeek)}</p>
       <ul class="kv">
-        <li><span>Posts</span><strong>${r.weekCount}</strong></li>
+        <li><span>Ladder posts</span><strong>${r.weekCount}</strong></li>
         <li><span>Missing views</span><strong>${r.missingViews}</strong></li>
-        <li><span>Best tag</span><strong>${r.best ? escapeHtml(r.best.tag) : '—'}</strong></li>
-        <li><span>Weak tag</span><strong>${r.worst ? escapeHtml(r.worst.tag) : '—'}</strong></li>
       </ul>
-      ${r.top.length ? `
-        <h3 class="mini-h">Top</h3>
-        <ol class="steps">${r.top.map((p) => `<li>${escapeHtml(p.title)} — ${fmt(p.views)}</li>`).join('')}</ol>
-      ` : ''}
-      ${r.bottom.length && r.bottom[0]?.id !== r.top[0]?.id ? `
-        <h3 class="mini-h">Bottom</h3>
-        <ol class="steps">${r.bottom.map((p) => `<li>${escapeHtml(p.title)} — ${fmt(p.views)}</li>`).join('')}</ol>
-      ` : ''}
     </section>
   `;
 }

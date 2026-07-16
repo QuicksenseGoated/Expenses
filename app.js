@@ -7,7 +7,7 @@ import { renderMore } from './components/more.js';
 
 const NAV = [
   { id: 'today', label: 'Today' },
-  { id: 'ideas', label: 'Ideas' },
+  { id: 'ideas', label: 'Formats' },
   { id: 'numbers', label: 'Numbers' },
   { id: 'more', label: 'More' }
 ];

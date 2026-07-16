@@ -9,6 +9,9 @@ const KEYS = {
   focus: 'sense.focusPlay',
   raids: 'sense.raids',
   customIdeas: 'sense.customIdeas',
+  customFormats: 'sense.customFormats',
+  formatRuns: 'sense.formatRuns',
+  tonightFormat: 'sense.tonightFormat',
   todayRaid: 'sense.todayRaid'
 };
 
@@ -46,12 +49,17 @@ export const Storage = {
       write(KEYS.focus, FOCUS_PLAYS[0].id);
       write(KEYS.raids, []);
       write(KEYS.customIdeas, []);
+      write(KEYS.customFormats, []);
+      write(KEYS.formatRuns, []);
+      write(KEYS.tonightFormat, null);
       write(KEYS.todayRaid, null);
       write(KEYS.seeded, true);
       return;
     }
     if (read(KEYS.raids, null) == null) write(KEYS.raids, []);
     if (read(KEYS.customIdeas, null) == null) write(KEYS.customIdeas, []);
+    if (read(KEYS.customFormats, null) == null) write(KEYS.customFormats, []);
+    if (read(KEYS.formatRuns, null) == null) write(KEYS.formatRuns, []);
   },
 
   reset() {
@@ -187,27 +195,61 @@ export const Storage = {
     write(KEYS.todayRaid, name || null);
   },
 
-  getCustomIdeas() {
-    return read(KEYS.customIdeas, []);
+  getCustomFormats() {
+    return read(KEYS.customFormats, []);
   },
 
-  addCustomIdea(idea) {
+  addCustomFormat(format) {
     const item = {
-      id: uid('ci'),
+      id: uid('cf'),
       tag: 'custom',
-      hook: '',
-      caption: '',
-      use: '',
-      why: 'Your hook',
+      title: '',
+      pitch: '',
+      run: [],
+      length: 'custom',
+      titleExample: '',
+      chat: '',
+      why: 'Your format',
       custom: true,
-      ...idea
+      ...format
     };
-    write(KEYS.customIdeas, [item, ...this.getCustomIdeas()].slice(0, 50));
+    write(KEYS.customFormats, [item, ...this.getCustomFormats()].slice(0, 50));
     return item;
   },
 
-  deleteCustomIdea(id) {
-    write(KEYS.customIdeas, this.getCustomIdeas().filter((i) => i.id !== id));
+  deleteCustomFormat(id) {
+    write(KEYS.customFormats, this.getCustomFormats().filter((i) => i.id !== id));
+  },
+
+  getFormatRuns() {
+    return read(KEYS.formatRuns, []);
+  },
+
+  addFormatRun(run) {
+    const item = {
+      id: uid('fr'),
+      formatId: null,
+      title: '',
+      tag: null,
+      date: new Date().toISOString().slice(0, 10),
+      acv: null,
+      note: '',
+      ...run
+    };
+    write(KEYS.formatRuns, [item, ...this.getFormatRuns()].slice(0, 200));
+    return item;
+  },
+
+  deleteFormatRun(id) {
+    write(KEYS.formatRuns, this.getFormatRuns().filter((r) => r.id !== id));
+  },
+
+  getTonightFormat() {
+    return read(KEYS.tonightFormat, null);
+  },
+
+  setTonightFormat(id) {
+    write(KEYS.tonightFormat, id || null);
   },
 
   exportAll() {
@@ -220,7 +262,9 @@ export const Storage = {
       savedIdeas: [...this.getSavedIdeas()],
       focus: this.getFocusPlayId(),
       raids: this.getRaids(),
-      customIdeas: this.getCustomIdeas(),
+      customFormats: this.getCustomFormats(),
+      formatRuns: this.getFormatRuns(),
+      tonightFormat: this.getTonightFormat(),
       todayRaid: this.getTodayRaid()
     };
   },
@@ -233,7 +277,9 @@ export const Storage = {
     if (data.savedIdeas) write(KEYS.savedIdeas, data.savedIdeas);
     if (data.focus) write(KEYS.focus, data.focus);
     if (data.raids) write(KEYS.raids, data.raids);
-    if (data.customIdeas) write(KEYS.customIdeas, data.customIdeas);
+    if (data.customFormats) write(KEYS.customFormats, data.customFormats);
+    if (data.formatRuns) write(KEYS.formatRuns, data.formatRuns);
+    if (data.tonightFormat !== undefined) write(KEYS.tonightFormat, data.tonightFormat);
     if (data.todayRaid !== undefined) write(KEYS.todayRaid, data.todayRaid);
     write(KEYS.seeded, true);
   }

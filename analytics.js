@@ -91,10 +91,45 @@ export function delta(history, field) {
 export function recommendTag(posts) {
   const best = bestTag(posts);
   if (best) return best.tag;
-  // default mix for cold start — clutch/fail dominate R6 short-form
   const hour = new Date().getHours();
   if (hour < 12) return 'teaser';
   return hour % 2 === 0 ? 'clutch' : 'fail';
+}
+
+/** Format-run analytics (live product) */
+export function formatStats(runs) {
+  const map = {};
+  runs.forEach((r) => {
+    const tag = r.tag || 'untagged';
+    if (!map[tag]) map[tag] = { tag, count: 0, acvSum: 0, withAcv: 0 };
+    map[tag].count += 1;
+    if (r.acv != null) {
+      map[tag].acvSum += Number(r.acv) || 0;
+      map[tag].withAcv += 1;
+    }
+  });
+  return Object.values(map)
+    .map((t) => ({
+      ...t,
+      avgAcv: t.withAcv ? Math.round(t.acvSum / t.withAcv) : null
+    }))
+    .sort((a, b) => (b.avgAcv || 0) - (a.avgAcv || 0) || b.count - a.count);
+}
+
+export function bestFormatTag(runs) {
+  const stats = formatStats(runs).filter((t) => t.withAcv >= 2 && t.tag !== 'untagged');
+  return stats[0] || formatStats(runs).filter((t) => t.count >= 2)[0] || null;
+}
+
+export function recommendFormatTag(runs, mode = 'siege') {
+  if (mode === 'variety') return 'variety';
+  if (mode === 'review') return 'series';
+  const best = bestFormatTag(runs);
+  if (best) return best.tag;
+  const dow = new Date().getDay();
+  if (dow === 5) return 'tournament'; // Fri → event energy
+  if (dow % 2 === 0) return 'challenge';
+  return 'community';
 }
 
 export function quotaLine(posts, d = new Date()) {

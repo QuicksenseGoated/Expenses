@@ -1,14 +1,17 @@
 import { Storage } from '../storage.js';
-import { quotaLine, tagStats, delta, WEEKLY_CLIP_TARGET, needsViews, weekReview } from '../analytics.js';
+import {
+  quotaLine, formatStats, delta, WEEKLY_CLIP_TARGET, needsViews, weekReview
+} from '../analytics.js';
 import { escapeHtml, openModal } from './modal.js';
 import { quickLog, updateViews } from './log.js';
 
 export function renderNumbers(root, ctx) {
   const s = Storage.getScore();
   const posts = Storage.getPosts();
+  const runs = Storage.getFormatRuns();
   const top = Storage.topPosts(5);
   const quota = quotaLine(posts);
-  const tags = tagStats(posts).filter((t) => t.count > 0);
+  const fstats = formatStats(runs);
   const pending = needsViews(posts, 10);
   const review = weekReview(posts);
   const acvD = delta(s.history, 'twitchAcv');
@@ -21,9 +24,9 @@ export function renderNumbers(root, ctx) {
         <div>
           <p class="eyebrow">Numbers</p>
           <h1>Scoreboard</h1>
-          <p class="sub">ACV first. Quota ${quota.weekCount}/${WEEKLY_CLIP_TARGET}. ${escapeHtml(review.nextWeek)}</p>
+          <p class="sub">ACV + formats ran. Ladder posts optional (${quota.weekCount}/${WEEKLY_CLIP_TARGET}).</p>
         </div>
-        <button type="button" class="btn primary" data-add>Log post</button>
+        <button type="button" class="btn ghost" data-add>Log Ladder post</button>
       </header>
 
       <div class="kpi-row">
@@ -60,14 +63,31 @@ export function renderNumbers(root, ctx) {
         </section>
       ` : ''}
 
-      ${tags.length ? `
+      ${fstats.length ? `
         <section class="panel" style="margin-top:0.85rem">
-          <h2>Tag performance</h2>
+          <h2>Formats by ACV</h2>
           <ul class="kv">
-            ${tags.map((t) => `
+            ${fstats.map((t) => `
               <li>
-                <span>${escapeHtml(t.tag)} · ${t.count}</span>
-                <strong>${t.avg != null ? `avg ${fmt(t.avg)}` : 'no views'}</strong>
+                <span>${escapeHtml(t.tag)} · ${t.count} runs</span>
+                <strong>${t.avgAcv != null ? `avg ACV ${fmt(t.avgAcv)}` : 'no ACV logged'}</strong>
+              </li>
+            `).join('')}
+          </ul>
+        </section>
+      ` : ''}
+
+      ${runs.length ? `
+        <section class="panel" style="margin-top:0.85rem">
+          <h2>Recent format runs</h2>
+          <ul class="post-list compact">
+            ${runs.slice(0, 8).map((r) => `
+              <li>
+                <div>
+                  <strong>${escapeHtml(r.title)}</strong>
+                  <span>${escapeHtml(r.date)} · ${escapeHtml(r.tag || '')} · ACV ${fmt(r.acv)}${r.note ? ` · ${escapeHtml(r.note)}` : ''}</span>
+                </div>
+                <button type="button" class="text-btn" data-del-run="${r.id}">Del</button>
               </li>
             `).join('')}
           </ul>
@@ -76,14 +96,14 @@ export function renderNumbers(root, ctx) {
 
       ${top.length ? `
         <section class="panel" style="margin-top:0.85rem">
-          <h2>Top posts</h2>
+          <h2>Top Ladder posts</h2>
           <ol class="steps">
-            ${top.map((p) => `<li><strong>${escapeHtml(p.title)}</strong> — ${fmt(p.views)} · ${escapeHtml(p.tag || p.platform)}${p.verdict ? ` · ${escapeHtml(p.verdict)}` : ''}</li>`).join('')}
+            ${top.map((p) => `<li><strong>${escapeHtml(p.title)}</strong> — ${fmt(p.views)}</li>`).join('')}
           </ol>
         </section>
       ` : ''}
 
-      <div class="panel-head" style="margin:1rem 0 0.5rem"><h2>Post log</h2></div>
+      <div class="panel-head" style="margin:1rem 0 0.5rem"><h2>Ladder post log</h2></div>
       <ul class="post-list">
         ${posts.map((p) => `
           <li>
@@ -146,6 +166,13 @@ export function renderNumbers(root, ctx) {
       ctx.refresh();
     });
   });
+
+  root.querySelectorAll('[data-del-run]').forEach((b) => {
+    b.addEventListener('click', () => {
+      Storage.deleteFormatRun(b.dataset.delRun);
+      ctx.refresh();
+    });
+  });
 }
 
 function editPost(post, ctx) {
@@ -165,9 +192,9 @@ function editPost(post, ctx) {
         </div>
         <div class="form-row">
           <label class="field"><span>Date</span><input type="date" name="date" value="${escapeHtml(post.date || '')}" /></label>
-          <label class="field"><span>Tag</span>
+          <label class="field"><span>Source</span>
             <select name="tag">
-              ${['clutch', 'fail', 'chat', 'series', 'teaser', 'variety', 'custom'].map((t) => `
+              ${['ladder', 'tiktok', 'shorts', 'other'].map((t) => `
                 <option value="${t}" ${post.tag === t ? 'selected' : ''}>${t}</option>
               `).join('')}
             </select>

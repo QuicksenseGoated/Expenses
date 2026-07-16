@@ -1,7 +1,6 @@
 /**
- * Hard operating facts for Quicksense growth desk.
- * Sources: 2026 Twitch/TikTok growth research + client constraints.
- * No public scrape of Quicksense analytics was available — numbers are user-logged.
+ * Quicksense growth desk — stream formats + operating model.
+ * Short-form clips = Streamladder (auto). Ideas here = what to RUN on stream.
  */
 
 export const CLIENT = {
@@ -21,233 +20,350 @@ export const CLIENT = {
   cta: 'LIVE on Twitch → QuicksenseGoated'
 };
 
-/** Business model of the channel */
 export const MODEL = {
-  product: 'Twitch live (ACV / average concurrent viewers)',
-  acquisition: 'TikTok + YouTube Shorts clips',
-  retention: 'Chat energy + fixed schedule + raids',
+  product: 'Twitch live (ACV)',
+  acquisition: 'Streamladder → TikTok/Shorts (auto highlights)',
+  retention: 'Stream formats people return for + raids + schedule',
   proof:
-    'R6 breakouts (e.g. Jynxzi path) were clip→Twitch funnels, not directory luck. In 2026 Twitch sorts live by viewer count — cold ACV stays buried without off-platform traffic.'
+    'Twitch ranks by live viewers. Formats that create stakes/chat (KOTH, challenges, chat-ruled ranked) raise ACV; Streamladder turns the chaos into discovery without manual caption farming.'
 };
 
 export const OPERATING_RULES = [
   {
     id: 'acv',
-    rule: 'Optimize for Twitch ACV, not follower vanity.',
-    why: 'Directory ranks by live viewers. Followers who never show up do not move rank.'
+    rule: 'Optimize for Twitch ACV.',
+    why: 'Directory sorts by live viewers. Formats that hold chat beat random ranked with dead air.'
   },
   {
-    id: 'funnel',
-    rule: 'Every short is an ad for the live show.',
-    why: 'TikTok/Shorts are discovery. Twitch is conversion. Orphan clips waste inventory.'
+    id: 'formats',
+    rule: 'Run a named format most Siege days.',
+    why: 'Titles + returning viewers need a reason (“KOTH night”), not “just ranked again.”'
   },
   {
-    id: 'hook1s',
-    rule: 'Hook in the first 1 second. Cut to the moment.',
-    why: '2026 short-form abandon spikes before 2s. Lobby/menu openers die in Stage 1 tests.'
-  },
-  {
-    id: 'length',
-    rule: 'Ship 15–30s vertical clips. Prefer loopable endings.',
-    why: 'Completion + loops drive watch time — the heaviest distribution signal.'
-  },
-  {
-    id: 'volume',
-    rule: 'Target 2–4 clips per Siege day (≈10–20/week). Floor: 1/day.',
-    why: 'Each post is a distribution test. More qualified tests → higher hit rate.'
+    id: 'ladder',
+    rule: 'Let Streamladder handle shorts. Don’t handcraft TikTok ideas.',
+    why: 'Your bottleneck is live product quality/consistency, not caption writing.'
   },
   {
     id: 'sameday',
-    rule: 'Post same day via Streamladder when possible.',
-    why: 'Freshness compounds with “just streamed” energy and title relevance.'
+    rule: 'Approve/ship Streamladder output same day.',
+    why: 'Fresh VODs distribute better; still log TT weekly views in Numbers.'
+  },
+  {
+    id: 'stakes',
+    rule: 'Put stakes on stream (rules, lockouts, tournaments).',
+    why: 'Stakes create moments Ladder can clip and give chat a job.'
   },
   {
     id: 'nocam',
-    rule: 'No facecam: lead with motion + on-screen text.',
-    why: 'Without face, the first frame must be the payoff or a bold hook line.'
+    rule: 'No facecam/IRL — sell gameplay + voice + on-screen rules.',
+    why: 'Overlay the format rules in title/panels so cold traffic gets it fast.'
   },
   {
     id: 'raid',
     rule: 'Raid a similar-size Siege channel every stream.',
-    why: 'Live social proof and reciprocal traffic beat hoping the directory finds you.'
+    why: 'Live network effects beat hoping the directory finds you.'
+  },
+  {
+    id: 'measure',
+    rule: 'Log ACV + which format you ran.',
+    why: 'Without format tags you can’t see what actually grows live.'
   }
 ];
 
 /**
- * Idea bank — ready-to-use. Each tied to a mechanism that works in R6 short-form.
- * Tags: clutch | fail | chat | series | variety | teaser
+ * Stream formats — long-form / live concepts.
+ * tag: ranked | tournament | challenge | community | variety | series
  */
-export const IDEAS = [
+export const FORMATS = [
   {
-    id: 'i1',
-    tag: 'clutch',
-    hook: '1vX and it should not have worked',
-    caption: `1vX and it should not have worked\n\n${CLIENT.cta}\n#R6Siege #RainbowSixSiege #SiegeClips`,
-    use: 'Start on the last enemy peek, not the setup. End on killcam or silence.',
-    why: 'High-stakes 1vX is a proven R6 seed category on TikTok.'
+    id: 'f_koth',
+    tag: 'tournament',
+    title: 'King of the Hill (KOTH)',
+    length: '2–3 hrs',
+    titleExample: 'KOTH — winner stays, losers cope',
+    pitch: 'One stack/player holds the “throne.” Challengers rotate. Chat crowns / dethrones.',
+    run: [
+      'Set rules on screen: win condition, round count, who challenges next',
+      'Loser queue from chat/friends; throne gets bragging rights',
+      'Reset throne every X maps if one person smurfs the lobby',
+      'End with sudden-death finals if time'
+    ],
+    chat: 'Type !challenge / pick next opp in chat',
+    why: 'Clear stakes + returning viewers (“is he still king?”). High ACV format for FPS.'
   },
   {
-    id: 'i2',
-    tag: 'fail',
-    hook: 'I threw the round for science',
-    caption: `I threw the round for science\n\n${CLIENT.cta}\n#R6Siege #SiegeFails #RainbowSix`,
-    use: 'Self-roast > explaining. Cut dead air before the throw.',
-    why: 'Fail/humor clips share harder than clean frags for chaotic brands.'
+    id: 'f_op_lock',
+    tag: 'challenge',
+    title: 'Operator Lock',
+    length: '1 session or full week',
+    titleExample: 'ONLY [OP] — lock week day 2',
+    pitch: 'Ban yourself to 1–2 operators. Failures become the show.',
+    run: [
+      'Announce lock in title + first 2 minutes',
+      'No swaps even after throws — that’s the bit',
+      'Mid-stream “almost broke the rule” moments = gold for Ladder',
+      'Week version: same lock Mon–Fri, Saturday montage vibe'
+    ],
+    chat: 'Chat votes the locked op at start',
+    why: 'Constraint = novelty without trends. Easy series branding.'
   },
   {
-    id: 'i3',
-    tag: 'chat',
-    hook: 'Chat picked the strat. Instant regret.',
-    caption: `Chat picked the strat. Instant regret.\n\n${CLIENT.cta}\n#R6Siege #Twitch #SiegeClips`,
-    use: 'Burn chat message as text overlay (no facecam).',
-    why: 'Chat-driven bits signal personality; converts clip viewers into live chatters.'
+    id: 'f_chat_strat',
+    tag: 'community',
+    title: 'Chat Decides the Strat',
+    length: '2 hrs',
+    titleExample: 'Chat picks site + strat — I suffer',
+    pitch: 'Chat picks site, ops, or execute. You commit even if it’s grief.',
+    run: [
+      'Poll or first-to-N messages locks the call',
+      'One redo max per round or it loses teeth',
+      'Roast the plan out loud — chaotic funny, not tilt-quit',
+      'End block with “chat record: W-L”'
+    ],
+    chat: 'Spam site name / !strat',
+    why: 'Chat velocity is a Twitch signal; viewers stick to see if the plan fails.'
   },
   {
-    id: 'i4',
+    id: 'f_rank_ruin',
     tag: 'series',
-    hook: 'Part 1 — one round from rank up',
-    caption: `Part 1 — one round from rank up\nPart 2 after stream.\n\n${CLIENT.cta}\n#R6Siege #Ranked`,
-    use: 'Rank or Ruin pack: 2–3 parts in 24–48h. End part 1 mid-tension.',
-    why: 'Series create return visits + profile taps; better than one-off spikes.'
+    title: 'Rank or Ruin',
+    length: '2–4 hrs ranked block',
+    titleExample: 'Rank or Ruin — stop at +2 or -3',
+    pitch: 'One ranked arc with a stop-loss / target. Story > endless grind.',
+    run: [
+      'Declare start rank + stop rules before queue',
+      'Narrate the arc every few games (“one off ruin”)',
+      'Hard stop when hit — no “one more” unless chat buys it with a dare',
+      'Next stream continues the season'
+    ],
+    chat: 'Predict W/L in chat before each queue',
+    why: 'Serialized live story. People come back for the ending.'
   },
   {
-    id: 'i5',
-    tag: 'series',
-    hook: 'Only [Operator] for the whole session',
-    caption: `Only [Operator] for the whole session\n\n${CLIENT.cta}\n#R6Siege #Operator`,
-    use: 'Operator Lock week. Tease day 1, montage day 7.',
-    why: 'Constraint content = novelty without dancing on trends.'
+    id: 'f_wheel',
+    tag: 'challenge',
+    title: 'Punishment Wheel',
+    length: '2 hrs',
+    titleExample: 'Lose = wheel spin (ops/sensitivity/drone only)',
+    pitch: 'Every loss spins a wheel: op lock, sens change, no drones, pistol only, etc.',
+    run: [
+      'Build 6–8 punishments (keep them playable, not soft-throw forever)',
+      'Spin on loss; lasts N rounds',
+      'Show wheel text on screen / read it every time',
+      'Win streak clears active punishment'
+    ],
+    chat: 'Suggest wheel slots',
+    why: 'Built-in variety inside Siege. Constant stakes for Ladder moments.'
   },
   {
-    id: 'i6',
-    tag: 'clutch',
-    hook: 'They never checked here',
-    caption: `They never checked here\n\n${CLIENT.cta}\n#R6Siege #SiegeClips`,
-    use: 'Cheeky hold / off-angle. Keep under 20s.',
-    why: '“IQ play” hooks perform in game-interest buckets.'
+    id: 'f_1v1_tourney',
+    tag: 'tournament',
+    title: 'Viewer 1v1 / Custom Bracket',
+    length: '2–3 hrs',
+    titleExample: 'Viewer 1v1 bracket — winner gets [prize]',
+    pitch: 'Small bracket in customs. Prize = shoutout, sub, or next-raid pick.',
+    run: [
+      'Cap entrants (8–16) so it finishes',
+      'BO1 until finals BO3',
+      'Loser stays as caster/chaos in chat',
+      'You play exhibition vs winner at end'
+    ],
+    chat: 'Entry: follow + type !enter',
+    why: 'Community appointment viewing. Growth via participants’ friends lurking.'
   },
   {
-    id: 'i7',
-    tag: 'fail',
-    hook: 'This is the exact moment the session died',
-    caption: `This is the exact moment the session died\n\n${CLIENT.cta}\n#R6Siege #Tilt`,
-    use: 'Tilt spiral as Rank or Ruin B-roll.',
-    why: 'Emotional swing = saves/shares; algorithm weights those over likes.'
+    id: 'f_unrated_edu',
+    tag: 'ranked',
+    title: 'VOD Review Lite (your own throws)',
+    length: '60–90 min',
+    titleExample: 'Reviewing last night’s worst rounds',
+    pitch: 'Watch your own VOD clips/rounds; roast yourself; fix one habit.',
+    run: [
+      'Pick 5 worst rounds max — don’t do a full lecture',
+      'One lesson per round, then queue to apply it',
+      'Keep chaotic tone — not coach-core YouTube'
+    ],
+    chat: 'Timestamp the next throw',
+    why: 'Fills a lower-energy day without dead ranked silence.'
   },
   {
-    id: 'i8',
-    tag: 'teaser',
-    hook: 'Live in 20 — ranked until we hit [goal]',
-    caption: `Live in 20 — ranked until we hit [goal]\n\nTwitch: ${CLIENT.twitch}\n#R6Siege #TwitchStreamer`,
-    use: 'Pre-stream teaser. Post 20–60 min before go-live.',
-    why: 'Warm ACV at minute 0 matters; cold starts stay buried in directory.'
+    id: 'f_duo_dare',
+    tag: 'community',
+    title: 'Duo Dare Queue',
+    length: '2 hrs',
+    titleExample: 'Duo w/ chat picks + dare after every loss',
+    pitch: 'Duo with a friend/viewer; chat assigns a dare after losses.',
+    run: [
+      'Dares must be in-game (op lock, drone cam only 30s, etc.)',
+      'Swap duo partner mid-stream if energy dies',
+      'Keep mic chaos high — format dies if silent'
+    ],
+    chat: 'Dare suggestions in chat',
+    why: 'Collab ACV bump + shared audiences.'
   },
   {
-    id: 'i9',
+    id: 'f_new_op',
+    tag: 'ranked',
+    title: 'Patch / New Op Night',
+    length: '2–3 hrs',
+    titleExample: 'New op / patch — learning in public',
+    pitch: 'First contact with patch notes or new operators. Discovery stream.',
+    run: [
+      'Read 3 patch changes max, then play',
+      'Commit to the new thing even if it’s bad',
+      'Title the night around the patch so directory searchers find you'
+    ],
+    chat: 'What should I try first?',
+    why: 'Timely directory traffic around patches.'
+  },
+  {
+    id: 'f_siege_brain',
     tag: 'variety',
-    hook: 'Siege brain in [game] is illegal',
-    caption: `Siege brain in [game] is illegal\n\n${CLIENT.cta}\n#VarietyStreamer #Twitch`,
-    use: 'Variety night only. Cap at 1–2 clips that day.',
-    why: 'Bridges weekly variety without rebranding away from Siege.'
+    title: 'Siege Brain Variety',
+    length: '2–4 hrs',
+    titleExample: 'Siege brain in [game]',
+    pitch: 'Weekly non-Siege with the same chaotic energy. Don’t rebrand.',
+    run: [
+      'Open with why this game (10s)',
+      'Keep Siege metaphors — that’s the bit',
+      'One variety night only — don’t flood the week',
+      'When SMP starts: “Siege stack in Minecraft” framing'
+    ],
+    chat: 'Rate how Siege-coded this is /10',
+    why: 'Expands audience without killing Siege identity.'
   },
   {
-    id: 'i10',
-    tag: 'series',
-    hook: 'Chat decides site. I cope.',
-    caption: `Chat decides site. I cope.\n\n${CLIENT.cta}\n#R6Siege #TwitchChat`,
-    use: 'Run live once/week. Clip the worst call.',
-    why: 'Interaction segments raise live chat velocity — a Twitch ranking input.'
-  },
-  {
-    id: 'i11',
-    tag: 'clutch',
-    hook: 'Ace or kick — chat’s rules',
-    caption: `Ace or kick — chat’s rules\n\n${CLIENT.cta}\n#R6Siege #SiegeClips`,
-    use: 'Stakes announced in first frame text.',
-    why: 'Challenge framing raises completion vs raw gameplay dump.'
-  },
-  {
-    id: 'i12',
-    tag: 'teaser',
-    hook: 'Clips from tonight’s ranked drop after stream',
-    caption: `Clips from tonight’s ranked drop after stream\n\n${CLIENT.cta}\n#R6Siege`,
-    use: 'End-screen / last clip of night. Train audience to expect same-day posts.',
-    why: 'Consistency trains the game-interest cluster to expect your account daily.'
-  },
-  {
-    id: 'i13',
-    tag: 'fail',
-    hook: 'Trusted the teammate. Mistake.',
-    caption: `Trusted the teammate. Mistake.\n\n${CLIENT.cta}\n#R6Siege #SiegeFails`,
-    use: 'Betrayal/teamfail beats. Fast cut.',
-    why: 'Relatable R6 pain = comments (distribution signal).'
-  },
-  {
-    id: 'i14',
+    id: 'f_smp_siege',
     tag: 'variety',
-    hook: 'When the Minecraft SMP starts: Siege stack tactics',
-    caption: `Siege stack tactics in Minecraft (SMP soon)\n\n${CLIENT.cta}\n#Minecraft #Twitch`,
-    use: 'Park for SMP launch. Don’t post until real.',
-    why: 'Future bridge content — only activate when SMP is live.'
+    title: 'SMP — Siege Stack Rules',
+    length: 'when SMP live',
+    titleExample: 'Minecraft SMP — clear the site (base)',
+    pitch: 'Future SMP: treat bases like sites, execute like Siege.',
+    run: [
+      'Don’t start until SMP is real',
+      'Name plays like Siege executes',
+      'Invite stack energy — community servers reward regulars'
+    ],
+    chat: 'Call the site (base) name',
+    why: 'Bridge format ready for later — park until needed.'
   },
   {
-    id: 'i15',
-    tag: 'clutch',
-    hook: 'Defuser down. No time. Watch.',
-    caption: `Defuser down. No time. Watch.\n\n${CLIENT.cta}\n#R6Siege #Clutch`,
-    use: 'Plant/defuse clock tension. Loop last 1s into first frame if possible.',
-    why: 'Timer tension + loops inflate watch time.'
+    id: 'f_affiliate_push',
+    tag: 'series',
+    title: 'Affiliate / Goal Push Weekend',
+    length: 'extra hour',
+    titleExample: 'Push to [goal] — no cope queues',
+    pitch: 'Transparent goal stream with format stakes attached.',
+    run: [
+      'State the number (ACV, hours, follows) once — don’t beg every minute',
+      'Pair with KOTH or Rank or Ruin so it’s entertainment',
+      'Celebrate milestones with a wheel spin, not a speech'
+    ],
+    chat: 'Sub/follow goals on screen',
+    why: 'Converts lurkers when paired with a real format.'
+  },
+  {
+    id: 'f_map_pool',
+    tag: 'challenge',
+    title: 'Banned Map Pool',
+    length: '1 session',
+    titleExample: 'Only [3 maps] tonight',
+    pitch: 'Shrink map pool for mastery + running jokes on the same sites.',
+    run: [
+      'Chat votes 3 maps in',
+      'Everything else banned',
+      'Track site win rates on screen if you can'
+    ],
+    chat: '!vote map',
+    why: 'Repeat locations create bit continuity and clip familiarity.'
+  },
+  {
+    id: 'f_scrim_rules',
+    tag: 'tournament',
+    title: 'House Rules Customs',
+    length: '2 hrs',
+    titleExample: 'Customs — pistol only / no gadgets / random ops',
+    pitch: 'Friend customs with stupid competitive rules.',
+    run: [
+      'One rule set per hour or it gets messy',
+      'Keep scoreboard public',
+      'Invite 1–2 viewer slots'
+    ],
+    chat: 'Next rule vote',
+    why: 'Low-pressure content day that still looks “event-y” in title.'
+  },
+  {
+    id: 'f_comeback',
+    tag: 'series',
+    title: 'Comeback Protocol',
+    length: 'rest of stream after tilt',
+    titleExample: 'Comeback protocol — down bad',
+    pitch: 'When tilted: forced format — 3-game reset with op lock + chat strat.',
+    run: [
+      'Trigger: 3 losses in a row or you say “protocol”',
+      'Mandatory water/mute rage 60s then commit',
+      'End protocol when you string 2 wins'
+    ],
+    chat: 'Force !protocol',
+    why: 'Stops dead tilt streams; viewers love recovery arcs.'
   }
 ];
 
+/** @deprecated alias for older imports */
+export const IDEAS = FORMATS;
+
 export const FOCUS_PLAYS = [
   {
-    id: 'same_day',
-    title: 'Same-day clip ship',
+    id: 'format_night',
+    title: 'Named format night',
     steps: [
-      'Stream Siege',
-      'Streamladder within 30 min',
-      'Post best 2–4 to TikTok + Shorts',
-      'CTA on every caption',
+      'Pick a format from Ideas',
+      'Put it in the Twitch title',
+      'Run the run-sheet',
+      'Streamladder after — approve highlights',
       'Raid out'
     ]
   },
   {
-    id: 'rank_ruin',
-    title: 'Rank or Ruin (series week)',
+    id: 'koth_week',
+    title: 'KOTH week',
     steps: [
-      'Pick one ranked block as the story',
-      'Clip 3 beats: hope → collapse → ending',
-      'Post as Part 1–3 across 24–48h',
-      'Point Parts 1–2 at live for the finish'
+      'Mon–Thu: KOTH or Rank or Ruin',
+      'Keep throne / rank arc across days',
+      'Fri: finals or open bracket',
+      'Sat: variety',
+      'Sun: log ACV + which formats won'
     ]
   },
   {
-    id: 'op_lock',
-    title: 'Operator Lock',
+    id: 'ladder_ops',
+    title: 'Streamladder ops only',
     steps: [
-      'Announce 1–2 ops only',
-      'Tease clip day 1',
-      'Clip constraint fails all week',
-      'End-week montage'
+      'Stream first',
+      'Open Streamladder within 30 min',
+      'Approve best auto clips — don’t rewrite strategy',
+      'Log TT weekly views Sunday'
     ]
   }
 ];
 
+export const FORMAT_TAGS = ['ranked', 'tournament', 'challenge', 'community', 'variety', 'series'];
+
 export function dayPlan(date = new Date()) {
-  const dow = date.getDay(); // 0 Sun … 6 Sat
+  const dow = date.getDay();
   const iso = toISO(date);
   if (dow === 0) {
     return {
       iso,
       mode: 'review',
-      title: 'Review + queue',
-      focusPlayId: 'same_day',
+      title: 'Review + plan',
+      focusPlayId: 'ladder_ops',
       actions: [
-        'Log TikTok weekly views + Twitch ACV in Numbers',
-        'Mark top 3 / bottom 3 posts in the log',
-        'Queue Monday teaser hook from Ideas',
-        'Raid list: 3 similar-size Siege channels for the week'
+        'Log Twitch ACV + TikTok weekly views',
+        'Mark which formats you ran (Ideas → Ran it)',
+        'Pick Mon–Wed formats in advance',
+        'Confirm 3 raid targets'
       ]
     };
   }
@@ -256,29 +372,32 @@ export function dayPlan(date = new Date()) {
       iso,
       mode: 'variety',
       title: 'Variety night',
-      focusPlayId: 'same_day',
+      focusPlayId: 'format_night',
       actions: [
-        'Go live (non-Siege) — keep chaotic energy',
-        'Clip 1–2 “Siege brain in X” max',
-        'Post TT + Shorts with Twitch CTA',
+        'Run Siege Brain Variety (or SMP if live)',
+        'Title must say the game + Siege energy',
+        'Streamladder approve 1–2 highlights max',
         'Raid out'
       ]
     };
   }
-  const focusPlayId = dow % 2 === 0 ? 'rank_ruin' : 'same_day';
   return {
     iso,
     mode: 'siege',
     title: 'Siege stream day',
-    focusPlayId,
+    focusPlayId: dow % 2 === 0 ? 'koth_week' : 'format_night',
     actions: [
-      'Go live Siege — talk for clips, call moments out',
-      'Streamladder: mark 8–12 → ship 2–4 same day',
-      'Post TikTok + Shorts with CTA',
-      'Log each post’s views later in Numbers',
-      'Raid similar-size Siege streamer'
+      'Pick tonight’s format + put it in the title',
+      'Go live — run the sheet, keep chat busy',
+      'Streamladder: approve same-day highlights',
+      'Mark format as ran + note ACV feel',
+      'Raid similar-size Siege channel'
     ]
   };
+}
+
+export function formatById(id) {
+  return FORMATS.find((f) => f.id === id) || null;
 }
 
 function toISO(d) {

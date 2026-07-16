@@ -16,9 +16,9 @@ export function quickLog(ctx, defaults = {}) {
           </label>
           <label class="field"><span>Views</span><input type="number" min="0" name="views" value="${defaults.views ?? ''}" placeholder="optional" /></label>
         </div>
-        <label class="field"><span>Tag</span>
+        <label class="field"><span>Note / source</span>
           <select name="tag">
-            ${['clutch', 'fail', 'chat', 'series', 'teaser', 'variety', 'custom'].map((t) => `
+            ${['ladder', 'tiktok', 'shorts', 'other'].map((t) => `
               <option value="${t}" ${defaults.tag === t ? 'selected' : ''}>${t}</option>
             `).join('')}
           </select>
