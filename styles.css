@@ -581,6 +581,15 @@ a { color: var(--royal); }
   outline: none;
 }
 
+.filter-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 12px;
+  scrollbar-width: none;
+}
+.filter-scroll::-webkit-scrollbar { display: none; }
+
 .undo-bar {
   display: flex;
   align-items: center;
@@ -805,76 +814,6 @@ a { color: var(--royal); }
   gap: 6px;
 }
 
-/* Legacy product tiles (unused) */
-.product-rail-wrap {
-  margin: 0 -4px 12px;
-  overflow: hidden;
-}
-
-.product-rail {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 4px 4px 10px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.product-rail::-webkit-scrollbar { display: none; }
-
-.product-tile {
-  flex: 0 0 156px;
-  scroll-snap-align: start;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
-  padding: 14px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  text-align: left;
-  min-height: 138px;
-  position: relative;
-  overflow: hidden;
-}
-
-.product-tile::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--tile-accent, var(--royal));
-}
-
-.product-tile:active { transform: scale(0.98); }
-
-.product-tile-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
-.product-tile strong {
-  font-size: 0.9rem;
-  line-height: 1.2;
-}
-
-.product-tile-price {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--royal);
-}
-
-.product-tile-meta {
-  font-size: 0.72rem;
-  color: var(--muted);
-  margin-top: auto;
-}
-
 .plan-picker {
   display: grid;
   gap: 8px;
@@ -980,36 +919,6 @@ a { color: var(--royal); }
   background: transparent;
   color: var(--muted);
   font-weight: 600;
-}
-
-.search-hint {
-  margin: 0 0 10px;
-  font-size: 0.82rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-/* Search & discover */
-.search {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--bg);
-  margin-bottom: 10px;
-  min-height: 48px;
-}
-
-.search span { color: var(--faint); font-size: 1.1rem; }
-.search input {
-  flex: 1;
-  border: 0;
-  background: transparent;
-  min-height: 44px;
-  font-size: 16px;
-  outline: none;
 }
 
 .chip-scroll {
@@ -1613,33 +1522,6 @@ button.envelope {
 .link-card strong { font-size: 0.92rem; color: var(--ink); }
 .link-card span { font-size: 0.8rem; color: var(--muted); }
 
-.calendar-list { display: grid; gap: 6px; }
-
-.cal-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--bg);
-  text-align: left;
-}
-
-.cal-date {
-  width: 48px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.cal-date b { display: block; font-family: var(--serif); font-size: 1.2rem; line-height: 1; }
-.cal-date span { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
-
-.cal-main { flex: 1; min-width: 0; }
-.cal-main strong { display: block; font-size: 0.9rem; }
-.cal-main span { font-size: 0.78rem; color: var(--muted); }
-
 /* Profile */
 .profile-card {
   text-align: center;
@@ -1752,9 +1634,6 @@ button.envelope {
   color: var(--ink-soft);
   line-height: 1.7;
 }
-
-.mini-envelopes { display: grid; gap: 10px; }
-.mini-env-head { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 4px; }
 
 .widget-toggles {
   list-style: none;

@@ -15,6 +15,7 @@ import {
 import { esc, money, niceDate, daysUntil, toast, addDaysISO, $, sheet, confirmSheet } from './ui.js';
 import { brandBadgeHtml, wireBrandBadges } from './brand.js';
 import { anchorLabel, anchorHint, projectNextBill, projectCancelBy } from '../billing.js';
+import { checkReminders } from './notifications.js';
 
 const FEATURED = ['streamladder', 'netflix', 'spotify', 'claude', 'youtube_premium', 'disney'];
 
@@ -539,6 +540,7 @@ export function renderSubDetail(root, ctx, id) {
     });
     toast('Saved');
     ctx.refresh();
+    checkReminders();
   });
 
   root.querySelector('[data-rm]')?.addEventListener('click', async () => {

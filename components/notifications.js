@@ -1,32 +1,75 @@
 import { Store } from '../store.js';
+import {
+  syncReminderSnapshot,
+  wasReminderSent,
+  markReminderSent,
+  migrateLegacyReminders,
+} from './reminder-db.js';
 
-const REMINDER_KEY = 'financer.reminders';
+let migrated = false;
 
-function readSent() {
-  try {
-    return JSON.parse(localStorage.getItem(REMINDER_KEY) || '{}');
-  } catch {
-    return {};
-  }
+function today() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function markSent(key) {
-  const sent = readSent();
-  sent[key] = new Date().toISOString().slice(0, 10);
-  localStorage.setItem(REMINDER_KEY, JSON.stringify(sent));
+function money(n, currency) {
+  return `${currency}${Number(n).toFixed(2)}`;
 }
 
-function wasSentToday(key) {
-  return readSent()[key] === new Date().toISOString().slice(0, 10);
+async function ensureMigrated() {
+  if (migrated) return;
+  await migrateLegacyReminders();
+  migrated = true;
 }
 
-function notify(title, body, tag) {
-  new Notification(title, {
-    body,
-    icon: './icons/icon-192.png',
-    tag,
-  });
-  markSent(tag);
+export function buildReminderSnapshot() {
+  const s = Store.get();
+  const day = today();
+  const month = day.slice(0, 7);
+
+  return {
+    notifications: !!s.settings?.notifications,
+    currency: s.currency,
+    today: day,
+    month,
+    bills: Store.upcomingBills(3)
+      .filter((b) => b.daysUntil <= 1)
+      .map((b) => ({
+        id: b.id,
+        name: b.name,
+        price: b.price,
+        currency: b.currency,
+        nextBill: b.nextBill,
+        daysUntil: b.daysUntil,
+      })),
+    cancels: Store.cancelAlerts(3).map((b) => ({
+      id: b.id,
+      name: b.name,
+      cancelBy: b.cancelBy,
+    })),
+    trials: Store.trialsEnding(3).map((t) => ({
+      id: t.id,
+      name: t.name,
+      trialEnds: t.trialEnds,
+      daysLeft: t.daysLeft,
+    })),
+    budgets: Store.budgetAlerts().map((b) => ({
+      id: b.id,
+      name: b.name,
+      used: b.used,
+      limit: b.limit,
+      rawPct: b.rawPct,
+    })),
+    priceChanges: s.subscriptions
+      .filter((sub) => sub.priceHistory?.[0]?.date === day)
+      .map((sub) => ({
+        id: sub.id,
+        name: sub.name,
+        oldPrice: sub.priceHistory[0].price,
+        newPrice: sub.price,
+        currency: sub.currency,
+      })),
+  };
 }
 
 export function notificationsSupported() {
@@ -51,45 +94,81 @@ export async function registerBackgroundSync() {
   }
 }
 
-export function checkReminders() {
-  const s = Store.get();
-  if (!s.settings?.notifications) return;
-  if (!notificationsSupported() || Notification.permission !== 'granted') return;
-
-  for (const b of Store.upcomingBills(3)) {
-    if (b.daysUntil > 1) continue;
-    const key = `bill-${b.id}-${b.nextBill}`;
-    if (wasSentToday(key)) continue;
-    const when = b.daysUntil === 0 ? 'today' : 'tomorrow';
-    notify('Bill due ' + when, `${b.name} — ${b.price} ${b.currency}`, key);
-  }
-
-  for (const b of Store.cancelAlerts(3)) {
-    const key = `cancel-${b.id}-${b.cancelBy}`;
-    if (wasSentToday(key)) continue;
-    notify('Cancel window closing', `${b.name} — cancel by ${b.cancelBy}`, key);
-  }
-
-  for (const t of Store.trialsEnding(3)) {
-    const key = `trial-${t.id}-${t.trialEnds}`;
-    if (wasSentToday(key)) continue;
-    const when = t.daysLeft === 0 ? 'today' : `in ${t.daysLeft} day${t.daysLeft === 1 ? '' : 's'}`;
-    notify('Trial ending ' + when, `${t.name} — first charge after trial`, key);
-  }
-
-  const month = new Date().toISOString().slice(0, 7);
-  for (const b of Store.budgetAlerts()) {
-    const level = b.rawPct >= 100 ? 'over' : 'warn';
-    const key = `budget-${level}-${b.id}-${month}`;
-    if (wasSentToday(key)) continue;
-    if (b.rawPct >= 100) {
-      notify('Budget exceeded', `${b.name}: ${b.pct}% of ${b.limit} limit`, key);
-    } else if (b.rawPct >= 80) {
-      notify('Budget at 80%', `${b.name}: ${money(b.used, Store.get().currency)} of ${money(b.limit, Store.get().currency)}`, key);
-    }
-  }
+function showNotification(title, body, tag) {
+  new Notification(title, {
+    body,
+    icon: './icons/icon-192.png',
+    tag,
+  });
 }
 
-function money(n, currency) {
-  return `${currency}${Number(n).toFixed(2)}`;
+export async function runReminderChecks({ useWindowNotification = true } = {}) {
+  await ensureMigrated();
+  const snapshot = buildReminderSnapshot();
+  await syncReminderSnapshot(snapshot);
+
+  if (!snapshot.notifications) return snapshot;
+
+  const day = snapshot.today;
+  const cur = snapshot.currency;
+  const fired = [];
+
+  const maybeNotify = async (key, title, body) => {
+    if (await wasReminderSent(key, day)) return;
+    if (useWindowNotification && notificationsSupported() && Notification.permission === 'granted') {
+      showNotification(title, body, key);
+    }
+    await markReminderSent(key, day);
+    fired.push(key);
+  };
+
+  for (const b of snapshot.bills) {
+    const when = b.daysUntil === 0 ? 'today' : 'tomorrow';
+    await maybeNotify(
+      `bill-${b.id}-${b.nextBill}`,
+      'Bill due ' + when,
+      `${b.name} — ${b.price} ${b.currency}`
+    );
+  }
+
+  for (const b of snapshot.cancels) {
+    await maybeNotify(
+      `cancel-${b.id}-${b.cancelBy}`,
+      'Cancel window closing',
+      `${b.name} — cancel by ${b.cancelBy}`
+    );
+  }
+
+  for (const t of snapshot.trials) {
+    const when = t.daysLeft === 0 ? 'today' : `in ${t.daysLeft} day${t.daysLeft === 1 ? '' : 's'}`;
+    await maybeNotify(
+      `trial-${t.id}-${t.trialEnds}`,
+      'Trial ending ' + when,
+      `${t.name} — first charge after trial`
+    );
+  }
+
+  for (const b of snapshot.budgets) {
+    const level = b.rawPct >= 100 ? 'over' : 'warn';
+    const key = `budget-${level}-${b.id}-${snapshot.month}`;
+    if (b.rawPct >= 100) {
+      await maybeNotify(key, 'Budget exceeded', `${b.name}: over ${money(b.limit, cur)} limit`);
+    } else if (b.rawPct >= 80) {
+      await maybeNotify(key, 'Budget at 80%', `${b.name}: ${money(b.used, cur)} of ${money(b.limit, cur)}`);
+    }
+  }
+
+  for (const p of snapshot.priceChanges) {
+    await maybeNotify(
+      `price-${p.id}-${day}`,
+      'Subscription price changed',
+      `${p.name}: ${money(p.oldPrice, p.currency)} → ${money(p.newPrice, p.currency)}`
+    );
+  }
+
+  return { snapshot, fired };
+}
+
+export function checkReminders() {
+  runReminderChecks().catch(() => {});
 }

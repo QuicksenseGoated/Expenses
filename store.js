@@ -316,6 +316,28 @@ export const Store = {
     );
   },
 
+  filterTransactions({ query = '', range = 'all' } = {}) {
+    let txs = query ? this.searchTransactions(query) : [...read().transactions];
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+
+    if (range === 'week') {
+      const start = new Date(now);
+      start.setDate(start.getDate() - 6);
+      const from = start.toISOString().slice(0, 10);
+      txs = txs.filter((t) => t.date >= from);
+    } else if (range === 'month') {
+      const m = now.toISOString().slice(0, 7);
+      txs = txs.filter((t) => t.date.startsWith(m));
+    } else if (range === 'last-month') {
+      const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const m = d.toISOString().slice(0, 7);
+      txs = txs.filter((t) => t.date.startsWith(m));
+    }
+
+    return txs;
+  },
+
   monthSpend() {
     const m = monthKey();
     return read().transactions

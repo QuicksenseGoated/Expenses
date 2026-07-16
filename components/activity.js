@@ -3,14 +3,23 @@ import { money, niceDate, esc, toast, sheet, $ } from './ui.js';
 import { openSpendSheet } from './home.js';
 
 let searchQuery = '';
+let dateRange = localStorage.getItem('financer.actRange') || 'all';
+
+const RANGES = [
+  { id: 'all', label: 'All' },
+  { id: 'week', label: '7 days' },
+  { id: 'month', label: 'This month' },
+  { id: 'last-month', label: 'Last month' },
+];
 
 export function renderActivity(root, ctx) {
   const s = Store.get();
-  const txs = searchQuery ? Store.searchTransactions(searchQuery) : s.transactions;
+  const txs = Store.filterTransactions({ query: searchQuery, range: dateRange });
   const monthSpend = Store.monthSpend();
   const grouped = groupByDate(txs);
   const byCategory = categorySpend(s);
   const undo = Store.peekUndo();
+  const filtering = searchQuery || dateRange !== 'all';
 
   root.innerHTML = `
     <header class="page-title">
@@ -23,6 +32,12 @@ export function renderActivity(root, ctx) {
       <input id="act-q" type="search" placeholder="Search note, category, amount…" value="${esc(searchQuery)}" autocomplete="off" spellcheck="false" />
       ${searchQuery ? '<button type="button" class="library-clear" id="act-clear" aria-label="Clear">×</button>' : ''}
     </label>
+
+    <div class="filter-scroll">
+      ${RANGES.map((r) => `
+        <button type="button" class="chip ${dateRange === r.id ? 'on' : ''}" data-range="${r.id}">${r.label}</button>
+      `).join('')}
+    </div>
 
     <div class="action-bar">
       <button type="button" class="btn primary" data-spend>Log spend</button>
@@ -40,7 +55,7 @@ export function renderActivity(root, ctx) {
       <section class="banner">Set your balance on Home before logging spends.</section>
     ` : ''}
 
-    ${!searchQuery && byCategory.length ? `
+    ${!filtering && byCategory.length ? `
       <section class="panel flush-top">
         <h2>By category</h2>
         <div class="cat-bars">
@@ -79,10 +94,10 @@ export function renderActivity(root, ctx) {
           `).join('')}
         </div>
       </section>
-    `).join('') : searchQuery ? `
+    `).join('') : filtering ? `
       <section class="hero-empty compact">
         <h2>No matches</h2>
-        <p>Try a different note, category, or amount.</p>
+        <p>Try a different search or date range.</p>
       </section>
     ` : `
       <section class="hero-empty">
@@ -101,6 +116,14 @@ export function renderActivity(root, ctx) {
   root.querySelector('#act-clear')?.addEventListener('click', () => {
     searchQuery = '';
     ctx.refresh();
+  });
+
+  root.querySelectorAll('[data-range]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      dateRange = btn.dataset.range;
+      localStorage.setItem('financer.actRange', dateRange);
+      ctx.refresh();
+    });
   });
 
   root.querySelector('[data-undo]')?.addEventListener('click', () => {
