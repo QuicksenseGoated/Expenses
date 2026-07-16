@@ -14,8 +14,10 @@ import {
 } from './billing.js';
 
 const KEY = 'financer.v3';
+const UNDO_KEY = 'financer.undo';
 const SCHEMA_VERSION = 3;
 const LEGACY_KEYS = ['financer.v2', 'financer.v1'];
+const MAX_UNDO = 8;
 
 const DEFAULT_WIDGETS = ['metrics', 'bills', 'recent'];
 
@@ -58,7 +60,12 @@ function normalize(state) {
     const catalogId = migrateCatalogId(sub.catalogId);
     const patch = catalogId !== sub.catalogId ? { catalogId } : {};
     const merged = Object.keys(patch).length ? { ...sub, ...patch } : sub;
-    return rollSubscriptionDates(merged);
+    const withDefaults = {
+      ...merged,
+      trialEnds: merged.trialEnds || null,
+      priceHistory: merged.priceHistory || [],
+    };
+    return rollSubscriptionDates(withDefaults);
   });
   if (changed || next.subscriptions.some((s, i) => s !== state.subscriptions?.[i])) {
     write(next);
@@ -87,6 +94,24 @@ function read() {
 function write(state) {
   localStorage.setItem(KEY, JSON.stringify(state));
   return state;
+}
+
+function readUndo() {
+  try {
+    return JSON.parse(localStorage.getItem(UNDO_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function pushUndo(entry) {
+  const stack = readUndo();
+  stack.unshift({ ...entry, at: Date.now() });
+  localStorage.setItem(UNDO_KEY, JSON.stringify(stack.slice(0, MAX_UNDO)));
+}
+
+function writeUndo(stack) {
+  localStorage.setItem(UNDO_KEY, JSON.stringify(stack.slice(0, MAX_UNDO)));
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -177,12 +202,39 @@ export const Store = {
     const s = read();
     const tx = s.transactions.find((t) => t.id === id);
     if (!tx) return s;
+    pushUndo({ kind: 'tx', tx: { ...tx }, balance: s.balance });
     if (s.balance == null) s.balance = 0;
     s.balance = Number(
       (tx.type === 'spend' ? s.balance + tx.amount : s.balance - tx.amount).toFixed(2)
     );
     s.transactions = s.transactions.filter((t) => t.id !== id);
     return write(s);
+  },
+
+  canUndo() {
+    return readUndo().length > 0;
+  },
+
+  peekUndo() {
+    return readUndo()[0] || null;
+  },
+
+  undo() {
+    const stack = readUndo();
+    const action = stack.shift();
+    if (!action) return false;
+    writeUndo(stack);
+
+    if (action.kind === 'tx') {
+      const s = read();
+      if (s.transactions.some((t) => t.id === action.tx.id)) return false;
+      s.balance = action.balance;
+      s.transactions.unshift(action.tx);
+      s.transactions = s.transactions.slice(0, 120);
+      write(s);
+      return true;
+    }
+    return false;
   },
 
   updateTx(id, patch) {
@@ -225,6 +277,8 @@ export const Store = {
       billingAnchor: entry.billingAnchor || '',
       billingDay: entry.billingDay || null,
       tip: entry.tip || '',
+      trialEnds: entry.trialEnds || null,
+      priceHistory: entry.priceHistory || [],
       addedAt: isoToday(),
     });
     return write(s);
@@ -238,8 +292,28 @@ export const Store = {
 
   updateSubscription(id, patch) {
     const s = read();
-    s.subscriptions = s.subscriptions.map((x) => (x.id === id ? { ...x, ...patch } : x));
+    s.subscriptions = s.subscriptions.map((x) => {
+      if (x.id !== id) return x;
+      const next = { ...x, ...patch };
+      if (patch.price != null && Number(patch.price) !== Number(x.price)) {
+        const history = [...(x.priceHistory || [])];
+        history.unshift({ price: Number(x.price), date: isoToday() });
+        next.priceHistory = history.slice(0, 20);
+      }
+      return next;
+    });
     return write(s);
+  },
+
+  searchTransactions(query) {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return read().transactions;
+    return read().transactions.filter((t) =>
+      t.note.toLowerCase().includes(q)
+      || t.category.toLowerCase().includes(q)
+      || String(t.amount).includes(q)
+      || t.date.includes(q)
+    );
   },
 
   monthSpend() {
@@ -383,8 +457,32 @@ export const Store = {
       const used = s.transactions
         .filter((t) => t.type === 'spend' && t.date.startsWith(m) && t.category === b.name)
         .reduce((sum, t) => sum + t.amount, 0);
-      return { ...b, used, pct: Math.min(100, Math.round((used / b.limit) * 100)) };
+      const pct = Math.round((used / b.limit) * 100);
+      const status = pct >= 100 ? 'over' : pct >= 80 ? 'warn' : 'ok';
+      return { ...b, used, pct: Math.min(100, pct), rawPct: pct, status };
     });
+  },
+
+  budgetAlerts() {
+    return this.budgetBurn().filter((b) => b.rawPct >= 80);
+  },
+
+  activeTrials() {
+    const today = isoToday();
+    return read().subscriptions.filter((s) => s.trialEnds && s.trialEnds >= today);
+  },
+
+  trialsEnding(withinDays = 7) {
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+    return this.activeTrials()
+      .map((sub) => {
+        const end = new Date(`${sub.trialEnds}T12:00:00`);
+        const daysLeft = Math.round((end - now) / 86400000);
+        return { ...sub, daysLeft };
+      })
+      .filter((x) => x.daysLeft >= 0 && x.daysLeft <= withinDays)
+      .sort((a, b) => a.daysLeft - b.daysLeft);
   },
 
   /** Next 7 days with projected charges per day. */

@@ -1,15 +1,18 @@
 import { Store } from '../store.js';
-import { esc, toast, confirmSheet, applyTheme, money } from './ui.js';
+import { esc, toast, confirmSheet, applyTheme, money, sheet, $ } from './ui.js';
 import { openCustomizeSheet } from './home.js';
 import { PRODUCT_COUNT } from '../catalog.js';
-import { enableNotifications, notificationsSupported, checkReminders } from './notifications.js';
+import { enableNotifications, notificationsSupported, checkReminders, registerBackgroundSync } from './notifications.js';
+import { runOnboarding } from './onboarding.js';
+import { encryptJson, decryptJson, cryptoSupported } from './crypto.js';
 
-const APP_VERSION = '15';
+const APP_VERSION = '16';
 
 export function renderProfile(root, ctx) {
   const s = Store.get();
   const settings = s.settings || {};
   const dataSize = Math.round(JSON.stringify(s).length / 1024);
+  const trials = Store.activeTrials().length;
 
   root.innerHTML = `
     <header class="page-title">
@@ -21,7 +24,7 @@ export function renderProfile(root, ctx) {
     <section class="profile-card">
       <img src="./icons/logo.png" width="96" height="96" alt="" class="profile-logo bank-logo" />
       <h2>${settings.displayName ? esc(settings.displayName) : 'Financer'}</h2>
-      <p>${s.subscriptions.length} subs · ${s.transactions.length} transactions</p>
+      <p>${s.subscriptions.length} subs · ${s.transactions.length} transactions${trials ? ` · ${trials} on trial` : ''}</p>
     </section>
 
     <section class="panel">
@@ -49,16 +52,20 @@ export function renderProfile(root, ctx) {
           <strong>Subscriptions</strong>
           <span>Manage your stack</span>
         </button>
+        <button type="button" class="link-card" data-onboard>
+          <strong>Replay setup</strong>
+          <span>Walk through onboarding again</span>
+        </button>
       </div>
     </section>
 
     <section class="panel">
       <h2>Reminders</h2>
-      <p class="panel-sub">Get notified when bills are due tomorrow or cancel windows are closing.</p>
+      <p class="panel-sub">Bills, trials, cancel windows, and budget alerts at 80% / 100%.</p>
       ${notificationsSupported() ? `
         <label class="toggle-row">
           <div>
-            <strong>Bill reminders</strong>
+            <strong>Push reminders</strong>
             <span>${settings.notifications && Notification.permission === 'granted' ? 'On' : 'Off'}</span>
           </div>
           <input type="checkbox" id="notif-toggle" ${settings.notifications && Notification.permission === 'granted' ? 'checked' : ''} />
@@ -71,6 +78,7 @@ export function renderProfile(root, ctx) {
       <p class="panel-sub">Export everything on this device, or restore from a file.</p>
       <div class="link-row">
         <button type="button" class="btn outline" data-export>Export</button>
+        ${cryptoSupported() ? `<button type="button" class="btn outline" data-export-enc>Encrypted</button>` : ''}
         <label class="btn outline import-label">
           Import
           <input type="file" id="import-file" accept="application/json,.json" hidden />
@@ -97,6 +105,11 @@ export function renderProfile(root, ctx) {
     await openCustomizeSheet(ctx);
   });
 
+  root.querySelector('[data-onboard]')?.addEventListener('click', async () => {
+    await runOnboarding(ctx);
+    ctx.refresh();
+  });
+
   root.querySelector('#notif-toggle')?.addEventListener('change', async (e) => {
     if (e.target.checked) {
       const ok = await enableNotifications();
@@ -106,6 +119,7 @@ export function renderProfile(root, ctx) {
         Store.updateSettings({ notifications: false });
         return;
       }
+      await registerBackgroundSync();
       toast('Reminders enabled');
       checkReminders();
     } else {
@@ -116,31 +130,18 @@ export function renderProfile(root, ctx) {
   });
 
   root.querySelector('[data-export]')?.addEventListener('click', () => {
-    const blob = new Blob([Store.exportData()], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `financer-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    downloadJson(Store.exportData(), `financer-backup-${iso()}.json`);
     toast('Exported');
   });
+
+  root.querySelector('[data-export-enc]')?.addEventListener('click', () => openEncryptedExport());
 
   root.querySelector('#import-file')?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const text = await file.text();
-      const ok = await confirmSheet({
-        title: 'Import backup',
-        body: 'Replace all data on this device with the backup file?',
-        confirmLabel: 'Import',
-        danger: true,
-      });
-      if (!ok) return;
-      Store.importData(text);
-      applyTheme(Store.get().settings?.theme || 'system');
-      toast('Restored');
-      ctx.navigate('home');
+      await importBackup(text, ctx);
     } catch {
       toast('Invalid file');
     }
@@ -160,4 +161,71 @@ export function renderProfile(root, ctx) {
     toast('Reset');
     ctx.navigate('home');
   });
+}
+
+function iso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function downloadJson(text, name) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function openEncryptedExport() {
+  const result = await sheet({
+    title: 'Encrypted backup',
+    body: `
+      <p class="sheet-hint">Your data is encrypted with AES-256 before download. Keep your password safe — we can't recover it.</p>
+      <label class="field"><span>Password</span><input id="enc-pass" type="password" minlength="4" autocomplete="new-password" required /></label>
+      <label class="field"><span>Confirm</span><input id="enc-pass2" type="password" minlength="4" autocomplete="new-password" required /></label>
+    `,
+    actions: [{ id: 'save', label: 'Export encrypted', primary: true }],
+  });
+  if (result?.action !== 'save') return;
+  const p1 = $('#enc-pass', result.overlay)?.value;
+  const p2 = $('#enc-pass2', result.overlay)?.value;
+  if (p1 !== p2) return toast('Passwords do not match');
+  try {
+    const enc = await encryptJson(Store.exportData(), p1);
+    downloadJson(enc, `financer-encrypted-${iso()}.json`);
+    toast('Encrypted export saved');
+  } catch (err) {
+    toast(err.message || 'Export failed');
+  }
+}
+
+async function importBackup(text, ctx) {
+  let json = text;
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed?.financerEncrypted) {
+      const pwResult = await sheet({
+        title: 'Decrypt backup',
+        body: `<label class="field"><span>Password</span><input id="dec-pass" type="password" autocomplete="current-password" required /></label>`,
+        actions: [{ id: 'save', label: 'Decrypt', primary: true }],
+      });
+      if (pwResult?.action !== 'save') return;
+      json = await decryptJson(parsed, $('#dec-pass', pwResult.overlay)?.value);
+    }
+  } catch {
+    toast('Wrong password or corrupt file');
+    return;
+  }
+
+  const ok = await confirmSheet({
+    title: 'Import backup',
+    body: 'Replace all data on this device with the backup file?',
+    confirmLabel: 'Import',
+    danger: true,
+  });
+  if (!ok) return;
+  Store.importData(json);
+  applyTheme(Store.get().settings?.theme || 'light');
+  toast('Restored');
+  ctx.navigate('home');
 }

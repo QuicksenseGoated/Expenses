@@ -1,4 +1,4 @@
-const VERSION = 'financer-v15';
+const VERSION = 'financer-v16';
 const LEGACY_CACHES = [
   'sense-desk-v3.3',
   'sense-desk-v3',
@@ -14,7 +14,8 @@ const LEGACY_CACHES = [
   'financer-v11',
   'financer-v12',
   'financer-v13',
-  'financer-v14'
+  'financer-v14',
+  'financer-v15'
 ];
 
 const PRECACHE = [
@@ -41,6 +42,7 @@ const PRECACHE = [
   './components/brand.js',
   './components/onboarding.js',
   './components/notifications.js',
+  './components/crypto.js',
   './components/install.js',
   './components/tab-icons.js'
 ];
@@ -75,6 +77,22 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('message', (e) => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('sync', (event) => {
+  if (event.tag !== 'financer-reminders') return;
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (clients.length) {
+      clients.forEach((c) => c.postMessage({ type: 'CHECK_REMINDERS' }));
+      return;
+    }
+    await self.registration.showNotification('Financer', {
+      body: 'Open Financer to review bills and budgets',
+      icon: './icons/icon-192.png',
+      tag: 'financer-nudge',
+    });
+  })());
 });
 
 function isNetworkFirst(url) {

@@ -6,7 +6,7 @@ import { renderCalendar } from './components/calendar.js';
 import { renderProfile } from './components/profile.js';
 import { initInstallPrompt } from './components/install.js';
 import { maybeOnboarding } from './components/onboarding.js';
-import { checkReminders } from './components/notifications.js';
+import { checkReminders, registerBackgroundSync } from './components/notifications.js';
 import { TAB_ICONS } from './components/tab-icons.js';
 import { applyTheme } from './components/ui.js';
 
@@ -77,9 +77,13 @@ function boot() {
   initInstallPrompt();
   maybeOnboarding(ctx);
   checkReminders();
+  if (s.settings?.notifications) registerBackgroundSync();
   setInterval(checkReminders, 60 * 60 * 1000);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') checkReminders();
+  });
+  navigator.serviceWorker?.addEventListener('message', (e) => {
+    if (e.data?.type === 'CHECK_REMINDERS') checkReminders();
   });
 }
 

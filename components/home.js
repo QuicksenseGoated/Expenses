@@ -261,20 +261,21 @@ function renderSubsAudit(slot, ctx, s) {
 
 function renderBudgets(slot, ctx, s) {
   const rows = Store.budgetBurn();
+  const anyWarn = rows.some((b) => b.status !== 'ok');
   slot.innerHTML = `
-    <section class="panel">
+    <section class="panel ${anyWarn ? 'insight warn' : ''}">
       <div class="panel-head">
         <h2>Budgets</h2>
-        <span class="pill">Tap to edit</span>
+        <span class="pill">${anyWarn ? 'Alert' : 'Tap to edit'}</span>
       </div>
       <div class="envelope-list">
         ${rows.map((b) => `
-          <button type="button" class="envelope" data-budget="${b.id}">
+          <button type="button" class="envelope budget-${b.status}" data-budget="${b.id}">
             <div class="env-head">
-              <span>${esc(b.name)}</span>
+              <span>${esc(b.name)}${b.status === 'over' ? ' · over' : b.status === 'warn' ? ' · 80%+' : ''}</span>
               <span>${money(b.used, s.currency)} / ${money(b.limit, s.currency)}</span>
             </div>
-            <div class="env-bar"><i style="width:${b.pct}%;background:${esc(b.color)}"></i></div>
+            <div class="env-bar"><i style="width:${Math.min(100, b.rawPct)}%;background:${b.status === 'over' ? 'var(--danger)' : esc(b.color)}"></i></div>
           </button>
         `).join('')}
       </div>

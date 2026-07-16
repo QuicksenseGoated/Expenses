@@ -517,6 +517,92 @@ a { color: var(--royal); }
   flex-shrink: 0;
 }
 
+.sub-trial-pill {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+  background: var(--gold-soft);
+  padding: 4px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.sub-card.trial {
+  border-color: var(--gold);
+}
+
+.trial-inline {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.price-history {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.price-history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
+}
+
+.price-history-row:last-child { border-bottom: 0; }
+.price-history-row.current { background: var(--surface); font-weight: 600; }
+.price-history-row span { color: var(--muted); }
+
+.activity-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--elevated);
+}
+
+.activity-search span { color: var(--faint); font-size: 1rem; }
+.activity-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-size: 0.9rem;
+  color: var(--ink);
+  outline: none;
+}
+
+.undo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: 0.88rem;
+}
+
+.btn.compact {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+}
+
+.budget-warn .env-bar i,
+.envelope.budget-warn .env-bar i { background: var(--warn) !important; }
+.envelope.budget-over .env-bar i { background: var(--danger) !important; }
+
 .stack-summary {
   display: flex;
   flex-wrap: wrap;
@@ -1182,13 +1268,20 @@ a { color: var(--royal); }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   background: var(--bg);
   text-align: left;
+}
+
+.cal-charge .brand-badge {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  font-size: 0.7rem;
 }
 
 .cal-charge span {
@@ -1208,17 +1301,6 @@ a { color: var(--royal); }
   font-weight: 700;
   color: var(--muted);
   text-align: right;
-}
-
-.cal-charge {
-  gap: 8px;
-}
-
-.cal-charge .brand-badge {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  font-size: 0.7rem;
 }
 
 /* Week strip */

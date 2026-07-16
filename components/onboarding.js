@@ -8,6 +8,11 @@ export async function maybeOnboarding(ctx) {
     Store.updateSettings({ onboarded: true });
     return;
   }
+  await runOnboarding(ctx);
+}
+
+export async function runOnboarding(ctx) {
+  const s = Store.get();
 
   await sheet({
     title: 'Welcome to Financer',

@@ -2,29 +2,45 @@ import { Store } from '../store.js';
 import { money, niceDate, esc, toast, sheet, $ } from './ui.js';
 import { openSpendSheet } from './home.js';
 
+let searchQuery = '';
+
 export function renderActivity(root, ctx) {
   const s = Store.get();
-  const txs = s.transactions;
+  const txs = searchQuery ? Store.searchTransactions(searchQuery) : s.transactions;
   const monthSpend = Store.monthSpend();
   const grouped = groupByDate(txs);
   const byCategory = categorySpend(s);
+  const undo = Store.peekUndo();
 
   root.innerHTML = `
     <header class="page-title">
       <h1>Activity</h1>
-      <p>${money(monthSpend, s.currency)} spent this month · ${txs.length} entries</p>
+      <p>${money(monthSpend, s.currency)} spent this month · ${s.transactions.length} entries</p>
     </header>
+
+    <label class="activity-search">
+      <span aria-hidden="true">⌕</span>
+      <input id="act-q" type="search" placeholder="Search note, category, amount…" value="${esc(searchQuery)}" autocomplete="off" spellcheck="false" />
+      ${searchQuery ? '<button type="button" class="library-clear" id="act-clear" aria-label="Clear">×</button>' : ''}
+    </label>
 
     <div class="action-bar">
       <button type="button" class="btn primary" data-spend>Log spend</button>
       <button type="button" class="btn outline" data-income>Add money</button>
     </div>
 
+    ${undo ? `
+      <div class="undo-bar">
+        <span>Deleted <strong>${esc(undo.tx.note)}</strong></span>
+        <button type="button" class="btn outline compact" data-undo>Undo</button>
+      </div>
+    ` : ''}
+
     ${s.balance == null ? `
       <section class="banner">Set your balance on Home before logging spends.</section>
     ` : ''}
 
-    ${byCategory.length ? `
+    ${!searchQuery && byCategory.length ? `
       <section class="panel flush-top">
         <h2>By category</h2>
         <div class="cat-bars">
@@ -56,14 +72,19 @@ export function renderActivity(root, ctx) {
                 <b class="${t.type === 'spend' ? 'out' : 'in'}">${t.type === 'spend' ? '−' : '+'}${money(t.amount, s.currency)}</b>
                 <div class="feed-actions">
                   <button type="button" class="link-btn" data-edit="${t.id}">Edit</button>
-                  <button type="button" class="link-btn" data-del="${t.id}">Undo</button>
+                  <button type="button" class="link-btn" data-del="${t.id}">Delete</button>
                 </div>
               </div>
             </div>
           `).join('')}
         </div>
       </section>
-    `).join('') : `
+    `).join('') : searchQuery ? `
+      <section class="hero-empty compact">
+        <h2>No matches</h2>
+        <p>Try a different note, category, or amount.</p>
+      </section>
+    ` : `
       <section class="hero-empty">
         <div class="hero-empty-icon">↗</div>
         <h2>No transactions</h2>
@@ -72,6 +93,22 @@ export function renderActivity(root, ctx) {
       </section>
     `}
   `;
+
+  root.querySelector('#act-q')?.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    ctx.refresh();
+  });
+  root.querySelector('#act-clear')?.addEventListener('click', () => {
+    searchQuery = '';
+    ctx.refresh();
+  });
+
+  root.querySelector('[data-undo]')?.addEventListener('click', () => {
+    if (Store.undo()) {
+      toast('Restored');
+      ctx.refresh();
+    }
+  });
 
   root.querySelector('[data-spend]')?.addEventListener('click', () => openSpendSheet(ctx));
   root.querySelector('[data-spend-empty]')?.addEventListener('click', () => openSpendSheet(ctx));
@@ -84,7 +121,7 @@ export function renderActivity(root, ctx) {
   root.querySelectorAll('[data-del]').forEach((b) => {
     b.addEventListener('click', () => {
       Store.deleteTx(b.dataset.del);
-      toast('Undone');
+      toast('Deleted');
       ctx.refresh();
     });
   });

@@ -20,6 +20,15 @@ function wasSentToday(key) {
   return readSent()[key] === new Date().toISOString().slice(0, 10);
 }
 
+function notify(title, body, tag) {
+  new Notification(title, {
+    body,
+    icon: './icons/icon-192.png',
+    tag,
+  });
+  markSent(tag);
+}
+
 export function notificationsSupported() {
   return 'Notification' in window;
 }
@@ -32,6 +41,16 @@ export async function enableNotifications() {
   return ok;
 }
 
+export async function registerBackgroundSync() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if ('sync' in reg) await reg.sync.register('financer-reminders');
+  } catch {
+    /* Background Sync not available */
+  }
+}
+
 export function checkReminders() {
   const s = Store.get();
   if (!s.settings?.notifications) return;
@@ -42,22 +61,35 @@ export function checkReminders() {
     const key = `bill-${b.id}-${b.nextBill}`;
     if (wasSentToday(key)) continue;
     const when = b.daysUntil === 0 ? 'today' : 'tomorrow';
-    new Notification('Bill due ' + when, {
-      body: `${b.name} — ${b.price} ${b.currency}`,
-      icon: './icons/icon-192.png',
-      tag: key,
-    });
-    markSent(key);
+    notify('Bill due ' + when, `${b.name} — ${b.price} ${b.currency}`, key);
   }
 
   for (const b of Store.cancelAlerts(3)) {
     const key = `cancel-${b.id}-${b.cancelBy}`;
     if (wasSentToday(key)) continue;
-    new Notification('Cancel window closing', {
-      body: `${b.name} — cancel by ${b.cancelBy}`,
-      icon: './icons/icon-192.png',
-      tag: key,
-    });
-    markSent(key);
+    notify('Cancel window closing', `${b.name} — cancel by ${b.cancelBy}`, key);
   }
+
+  for (const t of Store.trialsEnding(3)) {
+    const key = `trial-${t.id}-${t.trialEnds}`;
+    if (wasSentToday(key)) continue;
+    const when = t.daysLeft === 0 ? 'today' : `in ${t.daysLeft} day${t.daysLeft === 1 ? '' : 's'}`;
+    notify('Trial ending ' + when, `${t.name} — first charge after trial`, key);
+  }
+
+  const month = new Date().toISOString().slice(0, 7);
+  for (const b of Store.budgetAlerts()) {
+    const level = b.rawPct >= 100 ? 'over' : 'warn';
+    const key = `budget-${level}-${b.id}-${month}`;
+    if (wasSentToday(key)) continue;
+    if (b.rawPct >= 100) {
+      notify('Budget exceeded', `${b.name}: ${b.pct}% of ${b.limit} limit`, key);
+    } else if (b.rawPct >= 80) {
+      notify('Budget at 80%', `${b.name}: ${money(b.used, Store.get().currency)} of ${money(b.limit, Store.get().currency)}`, key);
+    }
+  }
+}
+
+function money(n, currency) {
+  return `${currency}${Number(n).toFixed(2)}`;
 }

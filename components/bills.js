@@ -208,15 +208,17 @@ function card(sub, currency) {
   const entry = getCatalogEntry(sub.catalogId);
   const label = entry?.displayName || sub.name;
   const brand = getSubBranding(sub);
+  const onTrial = sub.trialEnds && sub.trialEnds >= new Date().toISOString().slice(0, 10);
+  const trialDays = onTrial ? daysUntil(sub.trialEnds) : null;
   return `
-    <button type="button" class="sub-card ${urgent ? 'urgent' : ''}" data-sub="${sub.id}" style="--sub-accent:${esc(brand.color)}">
+    <button type="button" class="sub-card ${urgent ? 'urgent' : ''} ${onTrial ? 'trial' : ''}" data-sub="${sub.id}" style="--sub-accent:${esc(brand.color)}">
       <div class="sub-card-top">
         ${brandBadgeHtml(brand)}
         <div>
           <strong>${esc(label)}</strong>
           <span>${esc(sub.category)}${sub.cycle === 'yearly' ? ' · yearly' : ''}</span>
         </div>
-        ${urgent ? '<span class="sub-urgent-pill">Due soon</span>' : ''}
+        ${onTrial ? `<span class="sub-trial-pill">Trial · ${trialDays}d</span>` : urgent ? '<span class="sub-urgent-pill">Due soon</span>' : ''}
       </div>
       <div class="sub-card-bottom">
         <div>
@@ -251,6 +253,7 @@ async function openCustomSubSheet(ctx, s) {
       <label class="field"><span>Billing day (1–31)</span><input id="c-day" type="number" min="1" max="31" value="${new Date().getDate()}" /></label>
       <label class="field"><span>Next bill</span><input id="c-next" type="date" value="${addDaysISO(14)}" required /></label>
       <label class="field"><span>Cancel by</span><input id="c-cancel" type="date" value="${addDaysISO(13)}" required /></label>
+      <label class="field"><span>Trial ends (optional)</span><input id="c-trial" type="date" /></label>
     `,
     actions: [{ id: 'save', label: 'Add subscription', primary: true }],
   });
@@ -271,6 +274,7 @@ async function openCustomSubSheet(ctx, s) {
     cancelBy: String($('#c-cancel', o)?.value),
     billingAnchor: 'signup_anniversary',
     billingDay: day,
+    trialEnds: String($('#c-trial', o)?.value || '') || null,
   });
   toast('Added');
   ctx.refresh();
@@ -442,6 +446,8 @@ export function renderSubDetail(root, ctx, id) {
   const brand = getSubBranding(sub);
   const dBill = daysUntil(sub.nextBill);
   const dCancel = daysUntil(sub.cancelBy);
+  const onTrial = sub.trialEnds && sub.trialEnds >= new Date().toISOString().slice(0, 10);
+  const history = sub.priceHistory || [];
 
   root.innerHTML = `
     <header class="detail-top">
@@ -449,11 +455,20 @@ export function renderSubDetail(root, ctx, id) {
       ${brandBadgeHtml(brand, { lg: true })}
       <div>
         <h1>${esc(label)}</h1>
-        <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
+        <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}${onTrial ? ` · <span class="trial-inline">Trial ends ${niceDate(sub.trialEnds)}</span>` : ''}</p>
       </div>
     </header>
 
     <section class="timeline">
+      ${onTrial ? `
+        <div class="tl-item warn">
+          <span class="tl-dot"></span>
+          <div>
+            <strong>Free trial</strong>
+            <p>Ends ${niceDate(sub.trialEnds)} · ${daysUntil(sub.trialEnds)} days left</p>
+          </div>
+        </div>
+      ` : ''}
       <div class="tl-item ${dBill <= 7 ? 'warn' : ''}">
         <span class="tl-dot"></span>
         <div>
@@ -476,6 +491,24 @@ export function renderSubDetail(root, ctx, id) {
       ${sub.how ? `<article><h3>How</h3><p>${esc(sub.how)}</p></article>` : ''}
     </section>
 
+    ${history.length ? `
+      <section class="panel">
+        <h2>Price history</h2>
+        <div class="price-history">
+          <div class="price-history-row current">
+            <span>Now</span>
+            <b>${money(sub.price, sub.currency)}</b>
+          </div>
+          ${history.map((h) => `
+            <div class="price-history-row">
+              <span>${niceDate(h.date)}</span>
+              <b>${money(h.price, sub.currency)}</b>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    ` : ''}
+
     <div class="link-row">
       ${sub.url ? `<a class="btn outline" href="${esc(sub.url)}" target="_blank" rel="noopener">Website</a>` : ''}
     </div>
@@ -486,6 +519,7 @@ export function renderSubDetail(root, ctx, id) {
         <label class="field"><span>Price</span><input name="price" type="number" min="0" step="0.01" value="${sub.price}" required /></label>
         <label class="field"><span>Next bill</span><input name="nextBill" type="date" value="${sub.nextBill}" required /></label>
         <label class="field"><span>Cancel by</span><input name="cancelBy" type="date" value="${sub.cancelBy}" required /></label>
+        <label class="field"><span>Trial ends</span><input name="trialEnds" type="date" value="${sub.trialEnds || ''}" /></label>
         <button class="btn primary block" type="submit">Save</button>
       </form>
       <button type="button" class="btn danger block" data-rm>Remove</button>
@@ -501,6 +535,7 @@ export function renderSubDetail(root, ctx, id) {
       price: Number(fd.get('price')),
       nextBill: String(fd.get('nextBill')),
       cancelBy: String(fd.get('cancelBy')),
+      trialEnds: String(fd.get('trialEnds') || '') || null,
     });
     toast('Saved');
     ctx.refresh();
