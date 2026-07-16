@@ -17,14 +17,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=19" />
+  <link rel="stylesheet" href="./styles.css?v=20" />
 </head>
 <body>
   <div id="app"></div>
-  <script type="module" src="./app.js?v=19"></script>
+  <script>
+    window.addEventListener('error', function (e) {
+      var app = document.getElementById('app');
+      if (!app || app.children.length) return;
+      app.innerHTML = '<div class="boot-error"><h1>Financer couldn\'t start</h1><p>' + (e.message || 'Unknown error') + '</p><button type="button" class="btn primary" onclick="location.reload()">Reload</button></div>';
+    });
+  </script>
+  <script type="module" src="./app.js?v=20"></script>
   <script>
     (function () {
-      var v = '19';
+      var v = '20';
       if (!('serviceWorker' in navigator)) return;
 
       window.addEventListener('load', function () {
@@ -46,7 +53,7 @@
         if (window.caches) {
           caches.keys().then(function (keys) {
             keys.forEach(function (k) {
-              if (/sense|ledger|qs-ops|financer-v(1[0-2]|[1-9])/i.test(k)) caches.delete(k);
+              if (/sense|ledger|qs-ops|financer/i.test(k)) caches.delete(k);
             });
           });
         }

@@ -530,10 +530,6 @@ a { color: var(--royal); }
   flex-shrink: 0;
 }
 
-.sub-card.trial {
-  border-color: var(--gold);
-}
-
 .trial-inline {
   color: var(--gold);
   font-weight: 600;

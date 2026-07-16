@@ -1,4 +1,4 @@
-const VERSION = 'financer-v19';
+const VERSION = 'financer-v20';
 const LEGACY_CACHES = [
   'sense-desk-v3.3',
   'sense-desk-v3',
@@ -17,7 +17,9 @@ const LEGACY_CACHES = [
   'financer-v14',
   'financer-v15',
   'financer-v16',
-  'financer-v17'
+  'financer-v17',
+  'financer-v18',
+  'financer-v19'
 ];
 
 const PRECACHE = [
@@ -186,7 +188,10 @@ async function runOfflineReminders() {
 }
 
 function isNetworkFirst(url) {
-  return NETWORK_FIRST.some((part) => url.includes(part));
+  if (NETWORK_FIRST.some((part) => url.includes(part))) return true;
+  // Always fetch JS fresh — avoids stale SW serving broken modules after updates
+  if (/\.js(\?|$)/.test(url)) return true;
+  return false;
 }
 
 self.addEventListener('fetch', (e) => {

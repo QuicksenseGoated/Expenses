@@ -70,20 +70,50 @@ const ctx = {
 };
 
 function boot() {
-  const s = Store.get();
-  applyTheme(s.settings?.theme || 'light');
-  shell();
-  paint();
-  initInstallPrompt();
-  maybeOnboarding(ctx);
-  checkReminders();
-  if (s.settings?.notifications) registerBackgroundSync();
-  setInterval(checkReminders, 60 * 60 * 1000);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') checkReminders();
-  });
-  navigator.serviceWorker?.addEventListener('message', (e) => {
-    if (e.data?.type === 'CHECK_REMINDERS') checkReminders();
+  try {
+    const s = Store.get();
+    applyTheme(s.settings?.theme || 'light');
+    shell();
+    paint();
+    initInstallPrompt();
+    maybeOnboarding(ctx);
+    checkReminders();
+    if (s.settings?.notifications) registerBackgroundSync();
+    setInterval(checkReminders, 60 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkReminders();
+    });
+    navigator.serviceWorker?.addEventListener('message', (e) => {
+      if (e.data?.type === 'CHECK_REMINDERS') checkReminders();
+    });
+  } catch (err) {
+    showBootError(err);
+  }
+}
+
+function showBootError(err) {
+  console.error(err);
+  const msg = err?.message || String(err);
+  root.innerHTML = `
+    <div class="boot-error">
+      <h1>Financer couldn't start</h1>
+      <p>${msg.replace(/</g, '&lt;')}</p>
+      <p class="boot-error-hint">If you just updated, your phone may be using an old cached copy. Try the button below.</p>
+      <button type="button" class="btn primary" id="boot-recover">Clear cache &amp; reload</button>
+    </div>
+  `;
+  document.getElementById('boot-recover')?.addEventListener('click', async () => {
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch { /* ignore */ }
+    location.reload();
   });
 }
 
