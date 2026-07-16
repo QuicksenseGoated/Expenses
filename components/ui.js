@@ -17,14 +17,13 @@ export function esc(s = '') {
 export function money(n, currency = '€') {
   if (n == null || Number.isNaN(Number(n))) return '—';
   const v = Number(n);
-  const sign = v < 0 ? '-' : '';
+  const sign = v < 0 ? '−' : '';
   return `${sign}${currency}${Math.abs(v).toFixed(2)}`;
 }
 
 export function niceDate(iso) {
   if (!iso) return '—';
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 export function daysUntil(iso) {
@@ -41,6 +40,10 @@ export function addDaysISO(days) {
   return d.toISOString().slice(0, 10);
 }
 
+export function initials(name = '') {
+  return name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+}
+
 export function toast(msg) {
   let el = document.getElementById('toast');
   if (!el) {
@@ -52,17 +55,39 @@ export function toast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove('show'), 1600);
+  toast._t = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
-export function brandHead(sub) {
-  return `
-    <header class="brand-head">
-      <img class="brand-logo" src="./icons/logo.png" width="48" height="48" alt="Financer" />
-      <div class="brand-text">
-        <p class="brand">Financer</p>
-        <p class="brand-sub">${esc(sub)}</p>
+export function sheet({ title, body, actions = [] }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay';
+    overlay.innerHTML = `
+      <div class="sheet" role="dialog">
+        <div class="sheet-grab" aria-hidden="true"></div>
+        <header class="sheet-head"><h2>${esc(title)}</h2><button type="button" class="icon-btn" data-x aria-label="Close">✕</button></header>
+        <div class="sheet-body">${body}</div>
+        ${actions.length ? `<footer class="sheet-foot">${actions.map((a) => `<button type="button" class="btn ${a.primary ? 'primary' : ''}" data-act="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</footer>` : ''}
       </div>
-    </header>
-  `;
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('open'));
+    const close = (payload) => {
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.remove(), 200);
+      resolve(payload);
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
+    overlay.querySelector('[data-x]')?.addEventListener('click', () => close(null));
+    overlay.querySelectorAll('[data-act]').forEach((btn) => {
+      btn.addEventListener('click', () => close({ action: btn.dataset.act, overlay }));
+    });
+  });
+}
+
+export function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
 }

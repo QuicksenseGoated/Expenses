@@ -1,4 +1,4 @@
-const CACHE = 'financer-v1';
+const CACHE = 'financer-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -14,10 +14,10 @@ const ASSETS = [
   './icons/icon-maskable-512.png',
   './components/ui.js',
   './components/home.js',
-  './components/subs.js',
-  './components/spend.js',
-  './components/insights.js',
-  './components/more.js'
+  './components/bills.js',
+  './components/activity.js',
+  './components/plan.js',
+  './components/profile.js'
 ];
 
 self.addEventListener('install', (e) => {

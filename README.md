@@ -1,17 +1,21 @@
 # Financer
 
-Mobile money app — bank balance, spending, and smart subscriptions.
+Premium mobile personal finance — balance, subscriptions, spending.
 
 **Live:** https://quicksensegoated.github.io/Expenses/
 
-## Tabs
-| Tab | What it does |
-|-----|----------------|
-| **Home** | Set balance (e.g. 390), safe-to-spend, upcoming bills, recent activity |
-| **Subs** | Empty until you add — search a catalog, read why/when/how, open manage links |
-| **Spend** | Log spends (subtracts from balance) or deposits; undo history |
-| **Insights** | Coach tips, budget envelopes, bills due soon |
-| **More** | Feature list + reset local data |
+## Experience
+Inspired by Monzo, Revolut, Copilot, Rocket Money, and YNAB.
+
+| Tab | Purpose |
+|-----|---------|
+| **Home** | Dark balance card, safe-to-spend, 7-day chart, upcoming bills |
+| **Bills** | Your subs (empty until you add) + searchable catalog with links |
+| **Activity** | Transaction feed with undo |
+| **Plan** | Coach, budget envelopes, bill calendar |
+| **You** | Profile & reset |
+
+Gold **+** FAB logs spends from anywhere.
 
 ## Data
-Stored on-device in `localStorage`. No fake placeholder subscriptions.
+Local on-device (`localStorage`). Migrates from older Financer saves automatically.
