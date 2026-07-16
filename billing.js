@@ -99,6 +99,16 @@ export function chargeAmount(sub) {
 
 /** ISO dates in [year, month] when this subscription charges. */
 export function billDatesInMonth(sub, year, month) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  if (sub.trialEnds && sub.trialEnds >= todayIso && sub.trialVerified !== false) {
+    const chargeIso = sub.nextBill || sub.trialEnds;
+    const d = new Date(`${chargeIso}T12:00:00`);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      return [chargeIso];
+    }
+    return [];
+  }
+
   const cycle = sub.cycle || 'monthly';
   const anchor = sub.billingAnchor;
   let day = sub.billingDay;
@@ -143,6 +153,16 @@ export function chargesWithinDays(sub, withinDays = 30, from = new Date()) {
   const end = new Date(start);
   end.setDate(end.getDate() + withinDays);
   const hits = [];
+  const todayIso = start.toISOString().slice(0, 10);
+
+  if (sub.trialEnds && sub.trialEnds >= todayIso && sub.trialVerified !== false) {
+    const chargeIso = sub.nextBill || sub.trialEnds;
+    const when = new Date(`${chargeIso}T12:00:00`);
+    if (when >= start && when <= end) {
+      hits.push({ date: chargeIso, amount: chargeAmount(sub), kind: 'first_charge' });
+    }
+    return hits;
+  }
 
   for (let i = 0; i < 4; i++) {
     const probe = new Date(start);
@@ -163,6 +183,7 @@ export function rollSubscriptionDates(sub, from = new Date()) {
   const today = new Date(from);
   today.setHours(12, 0, 0, 0);
   const todayIso = today.toISOString().slice(0, 10);
+  if (sub.trialEnds && sub.trialEnds >= todayIso && sub.trialVerified !== false) return sub;
   if (!sub.nextBill || sub.nextBill >= todayIso) return sub;
 
   let day = sub.billingDay;

@@ -12,6 +12,7 @@ import {
   rollSubscriptionDates,
   chargeAmount,
 } from './billing.js';
+import { isOnTrial, isoToday, getSubLifecycle } from './trials.js';
 
 const KEY = 'financer.v3';
 const UNDO_KEY = 'financer.undo';
@@ -63,6 +64,10 @@ function normalize(state) {
     const withDefaults = {
       ...merged,
       trialEnds: merged.trialEnds || null,
+      trialVerified: merged.trialVerified ?? (merged.trialEnds ? true : null),
+      trialSource: merged.trialSource || '',
+      trialDays: merged.trialDays || null,
+      startedAt: merged.startedAt || merged.addedAt || null,
       priceHistory: merged.priceHistory || [],
     };
     return rollSubscriptionDates(withDefaults);
@@ -278,6 +283,10 @@ export const Store = {
       billingDay: entry.billingDay || null,
       tip: entry.tip || '',
       trialEnds: entry.trialEnds || null,
+      trialVerified: entry.trialVerified ?? null,
+      trialSource: entry.trialSource || '',
+      trialDays: entry.trialDays || null,
+      startedAt: entry.startedAt || isoToday(),
       priceHistory: entry.priceHistory || [],
       addedAt: isoToday(),
     });
@@ -361,10 +370,11 @@ export const Store = {
   },
 
   subsMonthly() {
-    return read().subscriptions.reduce(
-      (sum, x) => sum + monthlyEquivalent(x.price, x.cycle),
-      0
-    );
+    const today = isoToday();
+    return read().subscriptions.reduce((sum, x) => {
+      if (isOnTrial(x, today)) return sum;
+      return sum + monthlyEquivalent(x.price, x.cycle);
+    }, 0);
   },
 
   paydayIn() {
@@ -541,6 +551,45 @@ export const Store = {
       }
     }
     return days;
+  },
+
+  /** Full picture for a single calendar day (charges, trials, cancel deadlines). */
+  dayDetails(iso) {
+    const s = read();
+    const d = new Date(`${iso}T12:00:00`);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const payday = s.settings?.paydayDay;
+    const isPayday = payday != null && d.getDate() === Number(payday);
+    const charges = [];
+    const milestones = [];
+
+    for (const sub of s.subscriptions) {
+      const life = getSubLifecycle(sub, iso);
+      if (sub.trialEnds === iso && life.trialVerified) {
+        milestones.push({ type: 'trial_end', sub, life });
+      }
+      if (sub.cancelBy === iso) {
+        milestones.push({ type: 'cancel_by', sub, life });
+      }
+      for (const hit of billDatesInMonth(sub, year, month)) {
+        if (hit !== iso) continue;
+        charges.push({
+          ...sub,
+          price: chargeAmount(sub),
+          onTrial: life.onTrial,
+          kind: life.onTrial ? 'first_charge' : 'renewal',
+        });
+      }
+    }
+
+    return {
+      iso,
+      isPayday,
+      charges,
+      milestones,
+      dayTotal: charges.reduce((sum, c) => sum + Number(c.price || 0), 0),
+    };
   },
 
   /** 30-day balance projection using known bills + average daily spend. */

@@ -104,6 +104,8 @@ export function getCatalogEntry(catalogId) {
     price: plan?.price ?? sorted[0]?.price ?? 0,
     cycle: plan?.cycle ?? sorted[0]?.cycle ?? "monthly",
     blurb: plan?.blurb || sorted[0]?.blurb || "",
+    trial: plan?.trial || null,
+    trialPolicy: product.trialPolicy || null,
   };
 }
 

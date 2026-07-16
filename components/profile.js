@@ -6,7 +6,7 @@ import { enableNotifications, notificationsSupported, checkReminders, registerBa
 import { runOnboarding } from './onboarding.js';
 import { encryptJson, decryptJson, cryptoSupported } from './crypto.js';
 
-const APP_VERSION = '17';
+const APP_VERSION = '18';
 
 export function renderProfile(root, ctx) {
   const s = Store.get();

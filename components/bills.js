@@ -16,6 +16,13 @@ import { esc, money, niceDate, daysUntil, toast, addDaysISO, $, sheet, confirmSh
 import { brandBadgeHtml, wireBrandBadges } from './brand.js';
 import { anchorLabel, anchorHint, projectNextBill, projectCancelBy } from '../billing.js';
 import { checkReminders } from './notifications.js';
+import {
+  trialApplies,
+  trialResearchHtml,
+  computeTrialSchedule,
+  getSubLifecycle,
+  isoToday,
+} from '../trials.js';
 
 const FEATURED = ['streamladder', 'netflix', 'spotify', 'claude', 'youtube_premium', 'disney'];
 
@@ -204,32 +211,91 @@ export function renderBills(root, ctx) {
 }
 
 function card(sub, currency) {
-  const d = daysUntil(sub.nextBill);
-  const urgent = d <= 3;
+  const life = getSubLifecycle(sub);
   const entry = getCatalogEntry(sub.catalogId);
   const label = entry?.displayName || sub.name;
   const brand = getSubBranding(sub);
-  const onTrial = sub.trialEnds && sub.trialEnds >= new Date().toISOString().slice(0, 10);
-  const trialDays = onTrial ? daysUntil(sub.trialEnds) : null;
+  const critClass = life.urgentTrial || life.urgentCharge ? 'urgent' : life.urgentCancel ? 'warn' : life.onTrial ? 'trial' : '';
+
   return `
-    <button type="button" class="sub-card ${urgent ? 'urgent' : ''} ${onTrial ? 'trial' : ''}" data-sub="${sub.id}" style="--sub-accent:${esc(brand.color)}">
+    <button type="button" class="sub-card ${critClass}" data-sub="${sub.id}" style="--sub-accent:${esc(brand.color)}">
       <div class="sub-card-top">
         ${brandBadgeHtml(brand)}
-        <div>
+        <div class="sub-card-title">
           <strong>${esc(label)}</strong>
-          <span>${esc(sub.category)}${sub.cycle === 'yearly' ? ' · yearly' : ''}</span>
+          <span>${esc(sub.category)} · ${esc(sub.cycle)}</span>
         </div>
-        ${onTrial ? `<span class="sub-trial-pill">Trial · ${trialDays}d</span>` : urgent ? '<span class="sub-urgent-pill">Due soon</span>' : ''}
+      </div>
+      <div class="sub-critical">
+        ${life.onTrial ? `
+          <div class="crit-row trial ${life.urgentTrial ? 'urgent' : ''}">
+            <span>Trial ends</span>
+            <b>${niceDate(sub.trialEnds)} · ${life.trialDaysLeft}d</b>
+          </div>
+          <div class="crit-row charge">
+            <span>First charge</span>
+            <b>${niceDate(sub.nextBill)} · ${life.daysUntilCharge}d</b>
+          </div>
+        ` : `
+          <div class="crit-row charge ${life.urgentCharge ? 'urgent' : ''}">
+            <span>Renews</span>
+            <b>${niceDate(sub.nextBill)} · ${life.daysUntilCharge}d</b>
+          </div>
+        `}
+        <div class="crit-row cancel ${life.urgentCancel ? 'urgent' : ''}">
+          <span>Cancel by</span>
+          <b>${niceDate(sub.cancelBy)} · ${life.daysUntilCancel}d</b>
+        </div>
       </div>
       <div class="sub-card-bottom">
-        <div>
-          <span class="tiny">Next bill</span>
-          <b>${niceDate(sub.nextBill)}</b>
-        </div>
+        <span class="tiny">${life.onTrial ? 'After trial' : 'Per cycle'}</span>
         <div class="price">${money(sub.price, currency)}</div>
       </div>
     </button>
   `;
+}
+
+function wireTrialAddForm(root, entry) {
+  const trial = trialApplies(entry);
+  const useTrialEl = $('#useTrial', root);
+  const startedEl = $('#startedAt', root);
+  const trialEndsEl = $('#trialEnds', root);
+  const nextBillEl = $('#nextBill', root);
+  const cancelByEl = $('#cancelBy', root);
+  const billingDayEl = $('#billingDay', root);
+  const preview = $('#trialPreview', root);
+
+  const recalc = () => {
+    const use = useTrialEl?.checked && trial;
+    if (!use || !trial) {
+      preview?.classList.add('hidden');
+      return;
+    }
+    const started = startedEl?.value || isoToday();
+    const sched = computeTrialSchedule({ startedAt: started, trialDays: trial.days });
+    if (trialEndsEl) trialEndsEl.value = sched.trialEnds;
+    if (nextBillEl) nextBillEl.value = sched.firstCharge;
+    if (cancelByEl) cancelByEl.value = sched.cancelBy;
+    if (billingDayEl) {
+      billingDayEl.value = new Date(`${sched.firstCharge}T12:00:00`).getDate();
+    }
+    if (preview) {
+      preview.classList.remove('hidden');
+      preview.innerHTML = `
+        <div class="trial-preview-grid">
+          <div><span>Trial ends</span><b>${niceDate(sched.trialEnds)}</b></div>
+          <div><span>First charge</span><b>${niceDate(sched.firstCharge)}</b></div>
+          <div><span>Cancel by</span><b>${niceDate(sched.cancelBy)}</b></div>
+        </div>`;
+    }
+  };
+
+  useTrialEl?.addEventListener('change', recalc);
+  startedEl?.addEventListener('input', recalc);
+  if (trial && useTrialEl) {
+    useTrialEl.checked = true;
+    recalc();
+  }
 }
 
 async function openCustomSubSheet(ctx, s) {
@@ -320,6 +386,7 @@ export function renderCatalog(root, ctx, catalogId) {
                   <span class="plan-price">${esc(priceLabel(plan.price, plan.cycle, s.currency))}</span>
                 </div>
                 ${plan.blurb ? `<p>${esc(plan.blurb)}</p>` : ''}
+                ${plan.trial ? `<span class="plan-trial-tag">${plan.trial.days}-day trial · ${(plan.trial.cycles || ['monthly']).join('/')}</span>` : ''}
                 <span class="tag ${owned ? 'owned' : ''}">${owned ? 'Tracking' : 'Select'}</span>
               </button>
             `;
@@ -385,12 +452,24 @@ export function renderCatalog(root, ctx, catalogId) {
     ` : `
       <section class="panel">
         <h2>Track in Financer</h2>
+        ${trialResearchHtml(entry, entry.cycle)}
         <form id="add" class="form-stack">
-          <label class="field"><span>Your price</span><input name="price" type="number" min="0" step="0.01" value="${entry.price || 0}" required /></label>
+          ${trialApplies(entry) ? `
+            <label class="field checkbox-row trial-confirm">
+              <input type="checkbox" id="useTrial" name="useTrial" checked />
+              <span>Use researched trial — I'll verify this matches my signup</span>
+            </label>
+            <label class="field"><span>Started / signup date</span>
+              <input name="startedAt" id="startedAt" type="date" value="${isoToday()}" required />
+            </label>
+            <div id="trialPreview" class="trial-preview hidden"></div>
+            <input type="hidden" name="trialEnds" id="trialEnds" />
+          ` : ''}
+          <label class="field"><span>Your price (${entry.cycle})</span><input name="price" type="number" min="0" step="0.01" value="${entry.price || 0}" required /></label>
           ${needsBillingDay ? `
             <label class="field"><span>Your billing day (1–31)</span><input name="billingDay" id="billingDay" type="number" min="1" max="31" value="${defaultDay}" required /></label>
           ` : ''}
-          <label class="field"><span>Next bill</span><input name="nextBill" id="nextBill" type="date" value="${defaultNext || addDaysISO(14)}" required /></label>
+          <label class="field"><span>${trialApplies(entry) ? 'First charge' : 'Next bill'}</span><input name="nextBill" id="nextBill" type="date" value="${defaultNext || addDaysISO(14)}" required /></label>
           <label class="field"><span>Cancel by</span><input name="cancelBy" id="cancelBy" type="date" value="${defaultCancel || addDaysISO(13)}" required /></label>
           <button class="btn primary block" type="submit">Add subscription</button>
         </form>
@@ -401,10 +480,13 @@ export function renderCatalog(root, ctx, catalogId) {
   root.querySelector('[data-back]')?.addEventListener('click', () => ctx.back());
   root.querySelector('[data-owned]')?.addEventListener('click', () => ctx.openSub(owned.id));
 
+  wireTrialAddForm(root, entry);
+
   const billingDayEl = $('#billingDay', root);
   const nextBillEl = $('#nextBill', root);
   const cancelByEl = $('#cancelBy', root);
   const recalcDates = () => {
+    if ($('#useTrial', root)?.checked) return;
     if (!needsBillingDay || !billingDayEl) return;
     const day = Number(billingDayEl.value);
     if (!day) return;
@@ -417,6 +499,22 @@ export function renderCatalog(root, ctx, catalogId) {
   $('#add', root)?.addEventListener('submit', (e) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const trial = trialApplies(entry);
+    const useTrial = trial && $('#useTrial', root)?.checked;
+    const startedAt = String(fd.get('startedAt') || isoToday());
+    let trialEnds = null;
+    let trialVerified = null;
+    let trialSource = '';
+    let trialDays = null;
+
+    if (useTrial && trial) {
+      const sched = computeTrialSchedule({ startedAt, trialDays: trial.days });
+      trialEnds = sched.trialEnds;
+      trialVerified = true;
+      trialSource = trial.source || '';
+      trialDays = trial.days;
+    }
+
     Store.addSubscription({
       catalogId: entry.catalogId,
       name: entry.displayName,
@@ -424,8 +522,13 @@ export function renderCatalog(root, ctx, catalogId) {
       price: Number(fd.get('price')),
       currency: s.currency,
       cycle: entry.cycle,
-      nextBill: String(fd.get('nextBill')),
-      cancelBy: String(fd.get('cancelBy')),
+      nextBill: useTrial ? computeTrialSchedule({ startedAt, trialDays: trial.days }).firstCharge : String(fd.get('nextBill')),
+      cancelBy: useTrial ? computeTrialSchedule({ startedAt, trialDays: trial.days }).cancelBy : String(fd.get('cancelBy')),
+      trialEnds,
+      trialVerified,
+      trialSource,
+      trialDays,
+      startedAt,
       url: entry.url || '',
       why: entry.why || '',
       when: entry.when || '',
@@ -434,6 +537,7 @@ export function renderCatalog(root, ctx, catalogId) {
       billingDay: fd.get('billingDay') ? Number(fd.get('billingDay')) : null,
     });
     toast('Added');
+    checkReminders();
     ctx.navigate('bills');
   });
   wireBrandBadges(root);
@@ -445,9 +549,7 @@ export function renderSubDetail(root, ctx, id) {
   const entry = getCatalogEntry(sub.catalogId);
   const label = entry?.displayName || sub.name;
   const brand = getSubBranding(sub);
-  const dBill = daysUntil(sub.nextBill);
-  const dCancel = daysUntil(sub.cancelBy);
-  const onTrial = sub.trialEnds && sub.trialEnds >= new Date().toISOString().slice(0, 10);
+  const life = getSubLifecycle(sub);
   const history = sub.priceHistory || [];
 
   root.innerHTML = `
@@ -456,34 +558,29 @@ export function renderSubDetail(root, ctx, id) {
       ${brandBadgeHtml(brand, { lg: true })}
       <div>
         <h1>${esc(label)}</h1>
-        <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}${onTrial ? ` · <span class="trial-inline">Trial ends ${niceDate(sub.trialEnds)}</span>` : ''}</p>
+        <p>${money(sub.price, sub.currency)} / ${esc(sub.cycle)}</p>
       </div>
     </header>
 
-    <section class="timeline">
-      ${onTrial ? `
-        <div class="tl-item warn">
-          <span class="tl-dot"></span>
-          <div>
-            <strong>Free trial</strong>
-            <p>Ends ${niceDate(sub.trialEnds)} · ${daysUntil(sub.trialEnds)} days left</p>
-          </div>
+    <section class="sub-life-hero ${life.onTrial ? 'on-trial' : ''} ${life.urgentCharge || life.urgentCancel || life.urgentTrial ? 'urgent' : ''}">
+      ${life.onTrial ? `
+        <div class="life-block trial">
+          <span class="life-label">Trial ends</span>
+          <strong>${niceDate(sub.trialEnds)}</strong>
+          <em>${life.trialDaysLeft} days left — cancel before first charge</em>
         </div>
       ` : ''}
-      <div class="tl-item ${dBill <= 7 ? 'warn' : ''}">
-        <span class="tl-dot"></span>
-        <div>
-          <strong>Next charge</strong>
-          <p>${niceDate(sub.nextBill)} · in ${dBill} days</p>
-        </div>
+      <div class="life-block charge">
+        <span class="life-label">${life.onTrial ? 'First charge' : 'Renews'}</span>
+        <strong>${niceDate(sub.nextBill)}</strong>
+        <em>${life.daysUntilCharge} days · ${money(sub.price, sub.currency)}</em>
       </div>
-      <div class="tl-item ${dCancel <= 5 ? 'danger' : ''}">
-        <span class="tl-dot"></span>
-        <div>
-          <strong>Cancel window</strong>
-          <p>Cancel by ${niceDate(sub.cancelBy)} · ${dCancel} days left</p>
-        </div>
+      <div class="life-block cancel ${life.urgentCancel ? 'urgent' : ''}">
+        <span class="life-label">Cancel by</span>
+        <strong>${niceDate(sub.cancelBy)}</strong>
+        <em>${life.daysUntilCancel} days left to avoid charge</em>
       </div>
+      ${sub.trialSource ? `<p class="life-source">Trial source: <a href="${esc(sub.trialSource)}" target="_blank" rel="noopener">official docs ↗</a></p>` : ''}
     </section>
 
     <section class="info-cards">

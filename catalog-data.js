@@ -2723,7 +2723,12 @@ export const PRODUCTS = [
       }
     ],
     "billingAnchor": "signup_anniversary",
-    "billingSource": "Industry standard — charged on signup anniversary"
+    "billingSource": "Industry standard — charged on signup anniversary",
+    "trialPolicy": {
+      "status": "none",
+      "source": "https://help.netflix.com/en/node/16282",
+      "note": "Netflix does not offer free trials (official Help Center)."
+    }
   },
   {
     "id": "netlify",
@@ -3762,13 +3767,25 @@ export const PRODUCTS = [
         "id": "student",
         "name": "Student",
         "price": 5.99,
-        "cycle": "monthly"
+        "cycle": "monthly",
+        "trial": {
+          "days": 30,
+          "cycles": ["monthly"],
+          "source": "https://community.spotify.com/t5/FAQs/1-Month-Free-Premium-offer/ta-p/4941247",
+          "note": "1-month free trial for eligible new Student subscribers (monthly)."
+        }
       },
       {
         "id": "individual",
         "name": "Individual",
         "price": 11.99,
-        "cycle": "monthly"
+        "cycle": "monthly",
+        "trial": {
+          "days": 30,
+          "cycles": ["monthly"],
+          "source": "https://community.spotify.com/t5/FAQs/1-Month-Free-Premium-offer/ta-p/4941247",
+          "note": "1-month free trial for eligible new Individual subscribers (monthly). Duo/Family excluded."
+        }
       },
       {
         "id": "duo",
@@ -3904,21 +3921,39 @@ export const PRODUCTS = [
         "name": "Silver",
         "price": 9.15,
         "cycle": "monthly",
-        "blurb": "1080p/60fps, AI captions, direct posting"
+        "blurb": "1080p/60fps, AI captions, direct posting",
+        "trial": {
+          "days": 7,
+          "cycles": ["monthly"],
+          "source": "https://www.streamladder.com/",
+          "note": "7-day free trial for new users on paid monthly plans (official FAQ)."
+        }
       },
       {
         "id": "gold",
         "name": "Gold",
         "price": 14.99,
         "cycle": "monthly",
-        "blurb": "Scheduler, bulk export, zoom effects"
+        "blurb": "Scheduler, bulk export, zoom effects",
+        "trial": {
+          "days": 7,
+          "cycles": ["monthly"],
+          "source": "https://www.streamladder.com/",
+          "note": "7-day free trial for new users on paid monthly plans (official FAQ)."
+        }
       },
       {
         "id": "gold_clipgpt",
         "name": "Gold + ClipGPT",
         "price": 26.99,
         "cycle": "monthly",
-        "blurb": "Gold + AI VOD highlight detection"
+        "blurb": "Gold + AI VOD highlight detection",
+        "trial": {
+          "days": 7,
+          "cycles": ["monthly"],
+          "source": "https://www.streamladder.com/",
+          "note": "7-day free trial for new users on paid monthly plans (official FAQ)."
+        }
       }
     ],
     "billingAnchor": "signup_anniversary",
