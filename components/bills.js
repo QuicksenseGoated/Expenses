@@ -149,6 +149,7 @@ export function renderBills(root, ctx) {
       </div>
     `;
     wireProductClicks(featured);
+    wireBrandBadges(featured);
   };
 
   const paint = () => {
@@ -166,12 +167,14 @@ export function renderBills(root, ctx) {
       results.innerHTML = `
         <p class="library-hint-block">Pick a category chip or start typing to search all ${PRODUCT_COUNT} services.</p>
       `;
+      wireBrandBadges(root);
       return;
     }
     results.innerHTML = rows.length
       ? rows.map((p) => productRow(p)).join('')
       : `<p class="empty-sm">Try a different name or category.</p>`;
     wireProductClicks(results);
+    wireBrandBadges(root);
   };
 
   root.querySelector('[data-custom]')?.addEventListener('click', () => openCustomSubSheet(ctx, s));
@@ -197,7 +200,6 @@ export function renderBills(root, ctx) {
   });
 
   paint();
-  wireBrandBadges(root);
 }
 
 function card(sub, currency) {

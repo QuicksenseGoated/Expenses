@@ -9,17 +9,23 @@ export function brandDomain(url) {
   }
 }
 
-/** Clearbit brand logo from product website. */
+/** Primary — reliable for all catalog domains. */
 export function logoUrl(url) {
+  const domain = brandDomain(url);
+  if (!domain) return null;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
+export function clearbitUrl(url) {
   const domain = brandDomain(url);
   if (!domain) return null;
   return `https://logo.clearbit.com/${domain}`;
 }
 
-export function faviconUrl(url) {
+export function duckUrl(url) {
   const domain = brandDomain(url);
   if (!domain) return null;
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
 }
 
 export function brandBadgeHtml(brand, { lg = false, className = '' } = {}) {
@@ -31,7 +37,7 @@ export function brandBadgeHtml(brand, { lg = false, className = '' } = {}) {
 
   if (logo) {
     return `<div class="${cls}" style="background:${esc(bg)}" data-brand-domain="${esc(domain)}">
-      <img class="brand-logo" src="${esc(logo)}" alt="" loading="lazy" decoding="async" />
+      <img class="brand-logo" src="${esc(logo)}" alt="" decoding="async" referrerpolicy="no-referrer" />
       <span class="brand-fallback" hidden aria-hidden="true">${icon}</span>
     </div>`;
   }
@@ -39,25 +45,38 @@ export function brandBadgeHtml(brand, { lg = false, className = '' } = {}) {
   return `<div class="${cls} brand-badge--emoji" style="background:${esc(bg)}">${icon}</div>`;
 }
 
-/** Fallback chain: Clearbit → Google favicon → emoji. */
+/** Fallback: Google favicon → Clearbit → DuckDuckGo → emoji. */
 export function wireBrandBadges(root = document) {
   root.querySelectorAll('.brand-badge img.brand-logo').forEach((img) => {
     if (img.dataset.wired) return;
     img.dataset.wired = '1';
+
     img.addEventListener('error', () => {
       const badge = img.closest('.brand-badge');
       const domain = badge?.dataset.brandDomain;
-      if (!img.dataset.fallback && domain) {
-        img.dataset.fallback = 'favicon';
-        img.src = faviconUrl(`https://${domain}`);
+      if (!domain) return showEmojiFallback(badge, img);
+
+      const step = img.dataset.fallback || '0';
+      if (step === '0') {
+        img.dataset.fallback = 'clearbit';
+        img.src = clearbitUrl(`https://${domain}`);
         return;
       }
-      img.remove();
-      const fb = badge?.querySelector('.brand-fallback');
-      if (fb) {
-        fb.hidden = false;
-        badge?.classList.add('brand-badge--emoji');
+      if (step === 'clearbit') {
+        img.dataset.fallback = 'duck';
+        img.src = duckUrl(`https://${domain}`);
+        return;
       }
+      showEmojiFallback(badge, img);
     });
   });
+}
+
+function showEmojiFallback(badge, img) {
+  img.remove();
+  const fb = badge?.querySelector('.brand-fallback');
+  if (fb) {
+    fb.hidden = false;
+    badge?.classList.add('brand-badge--emoji');
+  }
 }
