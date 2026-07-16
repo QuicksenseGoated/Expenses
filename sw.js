@@ -1,4 +1,4 @@
-const VERSION = 'financer-v27';
+const VERSION = 'financer-v28';
 const LEGACY_CACHES = [
   'sense-desk-v3.3',
   'sense-desk-v3',
@@ -26,7 +26,8 @@ const LEGACY_CACHES = [
   'financer-v23',
   'financer-v24',
   'financer-v25',
-  'financer-v26'
+  'financer-v26',
+  'financer-v27'
 ];
 
 const PRECACHE = [

@@ -307,70 +307,74 @@ function subDetailPanelHtml(sub, life, entry, currency) {
     life.onTrial ? 'On trial' : 'Active',
     trackedSince ? `Since ${niceDate(trackedSince)}` : null,
     sub.category || entry?.category || null,
+    `${money(yearly, currency)}/yr`,
   ].filter(Boolean);
 
+  const insights = [
+    valueTip ? `<div class="sub-tip"><span aria-hidden="true">💡</span><p>${esc(valueTip)}</p></div>` : '',
+    saveHint ? `<p class="sub-save">${esc(saveHint)}</p>` : '',
+    priceBumped ? `<p class="sub-price-change">Price changed ${niceDate(priceBumped.date)} · was ${money(priceBumped.price, currency)}</p>` : '',
+  ].filter(Boolean).join('');
+
   return `
-    <section class="sub-card ${life.onTrial ? 'on-trial' : ''} ${urgent ? 'urgent' : ''}">
-      ${hero ? `
-        <div class="sub-hero ${hero.tone}">
-          <strong>${hero.num}</strong>
-          <span>${hero.label}</span>
-        </div>
+    <div class="sub-body ${life.onTrial ? 'on-trial' : ''} ${urgent ? 'urgent' : ''}">
+      ${hero || progress ? `
+        <section class="sub-panel sub-panel--hero ${hero?.tone || ''}">
+          ${hero ? `
+            <div class="sub-hero-row">
+              <strong>${hero.num}</strong>
+              <div>
+                <b>${hero.label}</b>
+                ${progress ? `<span>Day ${progress.day} of ${progress.total}</span>` : ''}
+              </div>
+            </div>
+          ` : ''}
+          ${progress ? `<div class="sub-trial-track"><i style="width:${progress.pct}%"></i></div>` : ''}
+        </section>
       ` : ''}
 
-      <div class="sub-stats">
-        <div class="sub-stat">
-          <span>Monthly</span>
-          <strong>${money(monthly, currency)}</strong>
-        </div>
-        <div class="sub-stat">
-          <span>Yearly est.</span>
-          <strong>${money(yearly, currency)}</strong>
-        </div>
-        <div class="sub-stat">
-          <span>Your stack</span>
-          <strong>${stackShare || 0}%</strong>
-        </div>
-      </div>
-
-      ${stackTotal > 0 ? `
-        <div class="sub-stack-bar" aria-hidden="true">
-          <i style="width:${Math.max(4, stackShare)}%"></i>
-        </div>
-      ` : ''}
-
-      ${blurb ? `<p class="sub-blurb">${esc(blurb)}</p>` : ''}
-
-      ${progress ? `
-        <div class="sub-trial">
-          <div class="sub-trial-track"><i style="width:${progress.pct}%"></i></div>
-          <span>Day ${progress.day} of ${progress.total}</span>
-        </div>
-      ` : ''}
-
-      <div class="sub-dates cols-${dates.length}">
-        ${dates.map((d) => `
-          <div class="sub-date ${d.mark}">
-            <span>${d.label}</span>
-            <strong>${niceDate(d.date)}</strong>
-            <em>${d.days}d</em>
+      <section class="sub-panel">
+        <div class="sub-stats">
+          <div class="sub-stat">
+            <span>Monthly</span>
+            <strong>${money(monthly, currency)}</strong>
           </div>
-        `).join('')}
-      </div>
+          <div class="sub-stat">
+            <span>Yearly est.</span>
+            <strong>${money(yearly, currency)}</strong>
+          </div>
+          <div class="sub-stat">
+            <span>Your stack</span>
+            <strong>${stackShare || 0}%</strong>
+          </div>
+        </div>
+        ${stackTotal > 0 ? `
+          <div class="sub-stack-bar" aria-hidden="true"><i style="width:${Math.max(4, stackShare)}%"></i></div>
+          <p class="sub-stack-note">${money(monthly, currency)} of ${money(stackTotal, currency)}/mo across your subs</p>
+        ` : ''}
+        ${blurb ? `<p class="sub-blurb">${esc(blurb)}</p>` : ''}
+      </section>
 
-      ${note ? `<p class="sub-note ${urgent ? 'urgent' : ''}">${note}</p>` : ''}
+      <section class="sub-panel sub-panel--dates">
+        <div class="sub-dates cols-${dates.length}">
+          ${dates.map((d) => `
+            <div class="sub-date ${d.mark}">
+              <span>${d.label}</span>
+              <strong>${niceDate(d.date)}</strong>
+              <em>${d.days}d</em>
+            </div>
+          `).join('')}
+        </div>
+        ${note ? `<p class="sub-note ${urgent ? 'urgent' : ''}">${note}</p>` : ''}
+      </section>
 
-      ${valueTip ? `<div class="sub-tip"><span aria-hidden="true">💡</span><p>${esc(valueTip)}</p></div>` : ''}
-
-      ${saveHint ? `<p class="sub-save">${esc(saveHint)}</p>` : ''}
-
-      ${priceBumped ? `<p class="sub-price-change">Price changed ${niceDate(priceBumped.date)} · was ${money(priceBumped.price, currency)}</p>` : ''}
+      ${insights ? `<section class="sub-panel sub-panel--insights">${insights}</section>` : ''}
 
       <div class="sub-foot">
         <span>${esc(footBits.join(' · '))}</span>
         ${sub.trialSource ? `<a href="${esc(sub.trialSource)}" target="_blank" rel="noopener">Trial policy ↗</a>` : ''}
       </div>
-    </section>
+    </div>
   `;
 }
 
