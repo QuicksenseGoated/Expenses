@@ -1591,50 +1591,6 @@ textarea {
 
 /* Responsive */
 @media (max-width: 1100px) {
-  .shell {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    position: sticky;
-    top: 0;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    z-index: 5;
-  }
-
-  .brand {
-    padding: 0;
-  }
-
-  .nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: 100%;
-    order: 3;
-  }
-
-  .nav-item {
-    padding: 0.5rem 0.7rem;
-    font-size: 0.9rem;
-  }
-
-  .sidebar-foot {
-    margin-left: auto;
-    border: 0;
-    padding: 0;
-    grid-auto-flow: column;
-    align-items: center;
-  }
-
-  .sidebar-foot p {
-    display: none;
-  }
-
   .dash-metrics,
   .result-tiles {
     grid-template-columns: repeat(2, 1fr);
@@ -1645,22 +1601,15 @@ textarea {
   .results-layout,
   .settings-grid,
   .brief-form,
-  .onboard {
+  .onboard,
+  .clips-layout,
+  .week-summary {
     grid-template-columns: 1fr;
-  }
-
-  .onboard-rail {
-    border-left: 0;
-    border-top: 1px solid var(--line);
   }
 
   .form-row,
   .form-row:has(.field:nth-child(3)) {
     grid-template-columns: 1fr;
-  }
-
-  .view {
-    padding: 1.25rem 1rem 2.5rem;
   }
 
   body {
@@ -1669,7 +1618,7 @@ textarea {
 
   #app {
     height: auto;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .main {

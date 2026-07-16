@@ -1,45 +1,35 @@
 # Sense Desk
 
-Social media **manager** for **Quicksense** — not a blank content hub.
+Social media **manager** for **Quicksense** — strategy desk, not a blank hub.
 
-Built around:
-- Twitch: `QuicksenseGoated` (product)
-- TikTok: `quicksenseclips3` (funnel)
-- YouTube: `quicksens` (archive / Shorts)
+- Twitch: `QuicksenseGoated`
+- TikTok: `quicksenseclips3`
+- YouTube: `quicksens`
 
-**North star:** grow TikTok views that convert into Twitch average viewers.
+**Open on your phone:**  
+https://quicksensegoated.github.io/Expenses/
 
-## What it does
+Then install as an app:
+- **Android Chrome** → ⋮ → Install app / Add to Home screen  
+- **iPhone Safari** → Share → Add to Home Screen  
+
+## Views
 
 | View | Job |
 |------|-----|
-| **Briefing** | Daily manager memo — what to do today |
-| **This Week** | Full Siege-heavy week plan + variety day |
-| **Clip Factory** | Streamladder → TikTok/Shorts assignments + hooks |
-| **Growth Plays** | Active campaigns (same-day clips, raids, series…) |
-| **Scoreboard** | Track Twitch avg + TikTok views |
-| **Playbook** | Brand bible, pillars, constraints, formulas |
+| **Briefing** | Daily manager memo |
+| **This Week** | Siege/variety week plan |
+| **Clip Factory** | Streamladder → TikTok/Shorts |
+| **Growth Plays** | Active campaigns |
+| **Scoreboard** | Twitch avg + TikTok views |
+| **Playbook** | Brand bible |
 
-## Strategy baked in
-
-- Siege ~5 days / week, variety 1× (Sat), Sunday = review
-- Chaotic funny vibe
-- No facecam / no IRL / no empty trend-chasing
-- Every clip CTAs to Twitch
-- Series: Rank or Ruin, Operator Lock, Chat Decides, Siege Brain
-
-## Run / PWA
-
-**Phone (recommended):** open the GitHub Pages URL after deploy, then  
-- Android: Chrome → Install app  
-- iPhone: Safari → Share → Add to Home Screen  
+## Local
 
 ```bash
 npm install
-npm run serve      # local: http://localhost:5173
-npm start          # optional Electron wrapper
+npm run serve      # http://localhost:5173
+npm start          # optional Electron
 ```
 
-Static web app lives in `src/` and deploys as a PWA via GitHub Actions → Pages.
-
-Data is local (`localStorage` on that device). Re-seed from Settings anytime.
+Data stays in that device’s `localStorage`.
