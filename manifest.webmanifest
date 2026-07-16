@@ -1,13 +1,13 @@
 {
-  "name": "Sense Desk",
-  "short_name": "Sense Desk",
-  "description": "Quicksense growth desk — today, ideas, numbers.",
+  "name": "Quicksense Ops",
+  "short_name": "QS Ops",
+  "description": "Creator business OS — week plan, trainer, strategy, KPIs.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0b1210",
-  "theme_color": "#0b1210",
+  "background_color": "#0e1110",
+  "theme_color": "#0e1110",
   "icons": [
     { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

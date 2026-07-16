@@ -1,21 +1,20 @@
-const CACHE = 'sense-desk-v3.3';
+const CACHE = 'qs-ops-v1.0';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './storage.js',
-  './facts.js',
-  './analytics.js',
+  './strategy.js',
+  './sw.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './components/today.js',
-  './components/ideas.js',
-  './components/numbers.js',
-  './components/more.js',
-  './components/modal.js',
-  './components/log.js'
+  './components/ui.js',
+  './components/week.js',
+  './components/train.js',
+  './components/strategyView.js',
+  './components/score.js'
 ];
 
 self.addEventListener('install', (e) => {

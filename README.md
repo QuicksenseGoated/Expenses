@@ -1,14 +1,16 @@
-# Sense Desk
+# Quicksense Ops
 
-Growth desk for **Quicksense** (`QuicksenseGoated`).
+Creator **business OS** for Quicksense (`QuicksenseGoated`).
 
-**App:** https://quicksensegoated.github.io/Expenses/
+**Live:** https://quicksensegoated.github.io/Expenses/
 
-| Screen | Function |
-|--------|----------|
-| Today | Day plan + focus play + KPI strip |
-| Ideas | Fact-backed hooks/captions (copy) |
-| Numbers | ACV / TikTok views + text post log |
-| More | Model, rules, export |
+This is not a caption / clip-idea app. Streamladder owns short-form. You run live formats, hit quotas, grade the week, and track ACV + TikTok views like a business.
 
-No clip uploads. Data stays in device `localStorage`.
+| Tab | Job |
+|-----|-----|
+| **Week** | Production calendar — format per day, live / Ladder / raid checkboxes |
+| **Train** | 1–5 scorecard on 5 ops axes · auto drill on weakest |
+| **Strategy** | One-pager: positioning, funnel, pillars, quotas, format catalog, raid list |
+| **Score** | ACV / TT week / followers snapshots + keep·kill·test decisions |
+
+Data stays in device `localStorage`. Install from the browser as a PWA on phone.
