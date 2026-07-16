@@ -1,4 +1,4 @@
-const VERSION = 'financer-v3';
+const VERSION = 'financer-v4';
 const LEGACY_CACHES = [
   'sense-desk-v3.3',
   'sense-desk-v3',

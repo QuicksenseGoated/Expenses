@@ -1,5 +1,5 @@
 import { Store } from '../store.js';
-import { searchCatalog, CATEGORIES, catalogById } from '../catalog.js';
+import { searchCatalog, CATEGORIES, CATALOG_SIZE, catalogById } from '../catalog.js';
 import { esc, money, niceDate, daysUntil, toast, initials, addDaysISO, $ } from './ui.js';
 
 export function renderBills(root, ctx) {
@@ -10,7 +10,7 @@ export function renderBills(root, ctx) {
   root.innerHTML = `
     <header class="page-title">
       <h1>Subscriptions</h1>
-      <p>${mine.length ? `${money(total, s.currency)} / month across ${mine.length} services` : 'Nothing tracked yet — search and add what you pay for.'}</p>
+      <p>${mine.length ? `${money(total, s.currency)} / month · ${mine.length} tracked` : 'Track only what you actually pay.'}</p>
     </header>
 
     ${mine.length ? `
@@ -20,45 +20,87 @@ export function renderBills(root, ctx) {
         </div>
       </section>
     ` : `
-      <section class="hero-empty">
+      <section class="hero-empty compact">
         <div class="hero-empty-icon">◎</div>
-        <h2>Your stack is empty</h2>
-        <p>No placeholder subscriptions. Search below and add only what you actually pay.</p>
+        <h2>Nothing tracked yet</h2>
+        <p>Slide up the library below and search Streamladder, Claude Max, Netflix…</p>
       </section>
     `}
 
-    <section class="panel">
-      <div class="panel-head"><h2>Discover</h2></div>
-      <label class="search">
-        <span aria-hidden="true">⌕</span>
-        <input id="q" type="search" placeholder="Search Netflix, gym, VPN…" autocomplete="off" />
-      </label>
-      <div class="chip-scroll" id="cats">
-        ${CATEGORIES.map((c, i) => `<button type="button" class="chip ${i === 0 ? 'on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}
+    <section class="search-drawer" id="drawer" data-open="false">
+      <button type="button" class="drawer-handle" id="drawer-handle" aria-expanded="false">
+        <span class="drawer-pill" aria-hidden="true"></span>
+        <span class="drawer-label">Slide up · subscription library</span>
+        <span class="drawer-count">${CATALOG_SIZE}+</span>
+      </button>
+      <div class="drawer-body" id="drawer-body">
+        <label class="search">
+          <span aria-hidden="true">⌕</span>
+          <input id="q" type="search" placeholder="Streamladder, Claude Max, Spotify…" autocomplete="off" enterkeyhint="search" />
+        </label>
+        <div class="chip-scroll" id="cats">
+          ${CATEGORIES.map((c, i) => `<button type="button" class="chip ${i === 0 ? 'on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}
+        </div>
+        <p class="search-hint" id="hint">Type at least 2 letters — every tier is in the library.</p>
+        <div class="discover-list" id="results"></div>
       </div>
-      <div class="discover-list" id="results"></div>
     </section>
   `;
 
   let category = 'All';
+  let open = false;
+  const drawer = $('#drawer', root);
+  const handle = $('#drawer-handle', root);
+  const body = $('#drawer-body', root);
   const q = $('#q', root);
   const results = $('#results', root);
+  const hint = $('#hint', root);
+
+  const setOpen = (next) => {
+    open = next;
+    drawer.dataset.open = open ? 'true' : 'false';
+    handle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      setTimeout(() => q.focus(), 280);
+    }
+  };
+
+  handle.addEventListener('click', () => setOpen(!open));
+
+  // Touch slide up on handle
+  let startY = 0;
+  handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+  handle.addEventListener('touchend', (e) => {
+    const dy = startY - e.changedTouches[0].clientY;
+    if (dy > 24) setOpen(true);
+    if (dy < -24) setOpen(false);
+  }, { passive: true });
 
   const paint = () => {
-    const rows = searchCatalog(q.value, category).slice(0, 50);
-    results.innerHTML = rows.map((c) => {
+    const query = q.value.trim();
+    if (query.length < 2) {
+      results.innerHTML = '';
+      hint.style.display = 'block';
+      hint.textContent = query.length === 1
+        ? 'One more letter…'
+        : `Search ${CATALOG_SIZE}+ plans — Streamladder tiers, Claude Max, Netflix, etc.`;
+      return;
+    }
+    hint.style.display = 'none';
+    const rows = searchCatalog(query, category);
+    results.innerHTML = rows.length ? rows.slice(0, 60).map((c) => {
       const owned = mine.some((m) => m.catalogId === c.id);
       return `
         <button type="button" class="discover-row" data-cid="${c.id}">
           <div class="brand-badge">${initials(c.name)}</div>
           <div class="discover-main">
             <strong>${esc(c.name)}</strong>
-            <span>${esc(c.category)} · ~${money(c.typicalPrice, c.currency)}/${esc(c.cycle)}</span>
+            <span>${esc(c.category)} · ${c.typicalPrice ? money(c.typicalPrice, c.currency) : 'Free'}/${esc(c.cycle)}</span>
           </div>
-          <span class="tag ${owned ? 'owned' : ''}">${owned ? 'Added' : 'Info'}</span>
+          <span class="tag ${owned ? 'owned' : ''}">${owned ? 'Added' : 'View'}</span>
         </button>
       `;
-    }).join('') || `<p class="empty-sm">No matches.</p>`;
+    }).join('') : `<p class="empty-sm">No match for “${esc(query)}”. Try another name or tier.</p>`;
 
     results.querySelectorAll('[data-cid]').forEach((btn) => {
       btn.addEventListener('click', () => ctx.openCatalog(btn.dataset.cid));
@@ -78,8 +120,6 @@ export function renderBills(root, ctx) {
   root.querySelectorAll('[data-sub]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.openSub(btn.dataset.sub));
   });
-
-  paint();
 }
 
 function card(sub) {
@@ -117,19 +157,19 @@ export function renderCatalog(root, ctx, catalogId) {
       <div class="brand-badge lg">${initials(c.name)}</div>
       <div>
         <h1>${esc(c.name)}</h1>
-        <p>${esc(c.category)} · ~${money(c.typicalPrice, c.currency)}/${esc(c.cycle)}</p>
+        <p>${esc(c.category)} · ${c.typicalPrice ? money(c.typicalPrice, c.currency) : 'Free'}/${esc(c.cycle)}</p>
       </div>
     </header>
 
     <section class="info-cards">
-      <article><h3>Why</h3><p>${esc(c.why)}</p></article>
-      <article><h3>When to use</h3><p>${esc(c.when)}</p></article>
-      <article><h3>How to manage</h3><p>${esc(c.how)}</p></article>
+      ${c.why ? `<article><h3>Why</h3><p>${esc(c.why)}</p></article>` : ''}
+      ${c.when ? `<article><h3>When to use</h3><p>${esc(c.when)}</p></article>` : ''}
+      ${c.how ? `<article><h3>How to manage</h3><p>${esc(c.how)}</p></article>` : ''}
       ${c.tip ? `<article class="gold"><h3>Pro tip</h3><p>${esc(c.tip)}</p></article>` : ''}
     </section>
 
     <div class="link-row">
-      <a class="btn outline" href="${esc(c.url)}" target="_blank" rel="noopener">Website</a>
+      ${c.url ? `<a class="btn outline" href="${esc(c.url)}" target="_blank" rel="noopener">Website</a>` : ''}
       ${c.manageUrl ? `<a class="btn outline" href="${esc(c.manageUrl)}" target="_blank" rel="noopener">Manage / cancel</a>` : ''}
     </div>
 
@@ -137,12 +177,12 @@ export function renderCatalog(root, ctx, catalogId) {
       <button type="button" class="btn primary block" data-owned>Open in your stack</button>
     ` : `
       <section class="panel">
-        <h2>Add to Financer</h2>
+        <h2>Track in Financer</h2>
         <form id="add" class="form-stack">
-          <label class="field"><span>Your price</span><input name="price" type="number" min="0" step="0.01" value="${c.typicalPrice}" required /></label>
+          <label class="field"><span>Your price</span><input name="price" type="number" min="0" step="0.01" value="${c.typicalPrice || 0}" required /></label>
           <label class="field"><span>Next bill</span><input name="nextBill" type="date" value="${addDaysISO(14)}" required /></label>
           <label class="field"><span>Cancel by</span><input name="cancelBy" type="date" value="${addDaysISO(13)}" required /></label>
-          <button class="btn primary block" type="submit">Track this subscription</button>
+          <button class="btn primary block" type="submit">Add subscription</button>
         </form>
       </section>
     `}
@@ -163,14 +203,14 @@ export function renderCatalog(root, ctx, catalogId) {
       cycle: c.cycle,
       nextBill: String(fd.get('nextBill')),
       cancelBy: String(fd.get('cancelBy')),
-      url: c.url,
-      manageUrl: c.manageUrl,
-      why: c.why,
-      when: c.when,
-      how: c.how,
-      tip: c.tip
+      url: c.url || '',
+      manageUrl: c.manageUrl || '',
+      why: c.why || '',
+      when: c.when || '',
+      how: c.how || '',
+      tip: c.tip || ''
     });
-    toast('Added to your stack');
+    toast('Added');
     ctx.navigate('bills');
   });
 }
@@ -209,9 +249,9 @@ export function renderSubDetail(root, ctx, id) {
     </section>
 
     <section class="info-cards">
-      <article><h3>Why</h3><p>${esc(sub.why)}</p></article>
-      <article><h3>When</h3><p>${esc(sub.when)}</p></article>
-      <article><h3>How</h3><p>${esc(sub.how)}</p></article>
+      ${sub.why ? `<article><h3>Why</h3><p>${esc(sub.why)}</p></article>` : ''}
+      ${sub.when ? `<article><h3>When</h3><p>${esc(sub.when)}</p></article>` : ''}
+      ${sub.how ? `<article><h3>How</h3><p>${esc(sub.how)}</p></article>` : ''}
     </section>
 
     <div class="link-row">
@@ -227,7 +267,7 @@ export function renderSubDetail(root, ctx, id) {
         <label class="field"><span>Cancel by</span><input name="cancelBy" type="date" value="${sub.cancelBy}" required /></label>
         <button class="btn primary block" type="submit">Save</button>
       </form>
-      <button type="button" class="btn danger block" data-rm>Remove subscription</button>
+      <button type="button" class="btn danger block" data-rm>Remove</button>
     </section>
   `;
 

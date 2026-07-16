@@ -1,5 +1,5 @@
 import { Store } from '../store.js';
-import { CATALOG } from '../catalog.js';
+import { CATALOG, CATALOG_SIZE } from '../catalog.js';
 import { toast } from './ui.js';
 
 export function renderProfile(root, ctx) {
@@ -43,7 +43,7 @@ export function renderProfile(root, ctx) {
         <div><dt>Balance set</dt><dd>${s.balance == null ? 'No' : 'Yes'}</dd></div>
         <div><dt>Subscriptions</dt><dd>${s.subscriptions.length}</dd></div>
         <div><dt>Transactions</dt><dd>${s.transactions.length}</dd></div>
-        <div><dt>Catalog</dt><dd>${CATALOG.length} services</dd></div>
+        <div><dt>Catalog</dt><dd>${CATALOG_SIZE}+ plans</dd></div>
       </dl>
     </section>
 
