@@ -120,7 +120,6 @@ function writeUndo(stack) {
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
-const isoToday = () => new Date().toISOString().slice(0, 10);
 const monthKey = () => new Date().toISOString().slice(0, 7);
 
 export const Store = {
