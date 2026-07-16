@@ -772,11 +772,10 @@ a { color: var(--royal); }
 .stats-dl dt { color: var(--muted); font-size: 0.85rem; }
 .stats-dl dd { margin: 0; font-weight: 700; }
 
-.plain-list {
-  margin: 0;
-  padding-left: 1.1rem;
-  color: var(--muted);
-  font-size: 0.9rem;
+.plain-list.numbered { list-style: decimal; padding-left: 1.25rem; }
+.panel.highlight {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #eff6ff, #fff);
 }
 
 /* Empty states */

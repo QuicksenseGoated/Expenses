@@ -17,8 +17,17 @@ export function renderProfile(root, ctx) {
       <p>Balance tracking · subscription intelligence · spend runway</p>
     </section>
 
+    <section class="panel highlight">
+      <h2>Icon still says Sense Desk?</h2>
+      <p class="body">iPhone/Android lock the home-screen name & icon when you first install. The website is Financer — your shortcut may be an old install.</p>
+      <ol class="plain-list numbered">
+        <li>Delete the app from your home screen</li>
+        <li>Open Safari → <strong>quicksensegoated.github.io/Expenses/</strong></li>
+        <li>Share → <strong>Add to Home Screen</strong> (should say Financer)</li>
+      </ol>
+    </section>
+
     <section class="panel">
-      <h2>Built like the best</h2>
       <ul class="feature-grid">
         <li><b>Monzo / Revolut</b><span>Balance hero & activity feed</span></li>
         <li><b>Rocket Money</b><span>Cancel windows & sub audit</span></li>
