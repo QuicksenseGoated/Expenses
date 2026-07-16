@@ -1,13 +1,13 @@
 {
-  "name": "Ledger",
-  "short_name": "Ledger",
-  "description": "Track subscriptions, billing dates, cancel advice, and money plans.",
+  "name": "Financer",
+  "short_name": "Financer",
+  "description": "Track bank balance, spending, and subscriptions with cancel advice.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#eef2f7",
-  "theme_color": "#eef2f7",
+  "background_color": "#eef3fb",
+  "theme_color": "#eef3fb",
   "icons": [
     { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

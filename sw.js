@@ -1,21 +1,23 @@
-const CACHE = 'ledger-ui-v1';
+const CACHE = 'financer-v1';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
-  './data.js',
+  './store.js',
+  './catalog.js',
   './sw.js',
   './manifest.webmanifest',
+  './icons/logo.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './components/ui.js',
   './components/home.js',
   './components/subs.js',
+  './components/spend.js',
   './components/insights.js',
-  './components/more.js',
-  './components/detail.js'
+  './components/more.js'
 ];
 
 self.addEventListener('install', (e) => {

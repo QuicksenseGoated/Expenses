@@ -1,17 +1,10 @@
 {
-  "name": "ledger",
-  "productName": "Ledger",
-  "version": "0.1.0",
-  "description": "Mobile subscription expense app — track bills, research, cancel advice.",
-  "main": "main.js",
-  "author": "Quicksense",
-  "license": "UNLICENSED",
+  "name": "financer",
+  "productName": "Financer",
+  "version": "0.2.0",
+  "description": "Financer — track bank balance, spending, and subscriptions.",
   "private": true,
   "scripts": {
-    "start": "electron .",
     "serve": "npx --yes serve . -l 5173"
-  },
-  "devDependencies": {
-    "electron": "^31.0.0"
   }
 }

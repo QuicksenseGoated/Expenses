@@ -1,45 +1,64 @@
-import { APP } from './data.js';
+import { Store } from './store.js';
 import { renderHome } from './components/home.js';
-import { renderSubs } from './components/subs.js';
+import { renderSubs, renderCatalogDetail, renderMySubDetail } from './components/subs.js';
+import { renderSpend } from './components/spend.js';
 import { renderInsights } from './components/insights.js';
 import { renderMore } from './components/more.js';
-import { renderDetail } from './components/detail.js';
 
 const TABS = [
   { id: 'home', label: 'Home' },
   { id: 'subs', label: 'Subs' },
+  { id: 'spend', label: 'Spend' },
   { id: 'insights', label: 'Insights' },
   { id: 'more', label: 'More' }
 ];
 
 const root = document.getElementById('app');
-let route = 'home';
-let detailId = null;
+let route = localStorage.getItem('financer.route') || 'home';
+if (!TABS.some((t) => t.id === route)) route = 'home';
+
+let overlay = null; // { type: 'catalog'|'mysub', id }
 let stack = [];
 
 const ctx = {
   navigate(id) {
     route = id;
-    detailId = null;
+    localStorage.setItem('financer.route', id);
+    overlay = null;
     stack = [];
     paint();
     window.scrollTo(0, 0);
   },
-  openSub(id) {
-    stack.push(route);
-    detailId = id;
+  openCatalog(id) {
+    stack.push({ route, overlay });
+    overlay = { type: 'catalog', id };
+    paint();
+    window.scrollTo(0, 0);
+  },
+  openMySub(id) {
+    stack.push({ route, overlay });
+    overlay = { type: 'mysub', id };
     paint();
     window.scrollTo(0, 0);
   },
   back() {
-    detailId = null;
-    route = stack.pop() || 'subs';
+    const prev = stack.pop();
+    if (prev) {
+      route = prev.route;
+      overlay = prev.overlay;
+    } else {
+      overlay = null;
+    }
     paint();
     window.scrollTo(0, 0);
+  },
+  refresh() {
+    paint();
   }
 };
 
 function boot() {
+  Store.get();
   shell();
   paint();
 }
@@ -65,16 +84,13 @@ function shell() {
 
 function paint() {
   if (!document.getElementById('main')) shell();
-
-  const onDetail = !!detailId;
+  const onOverlay = !!overlay;
   root.querySelectorAll('[data-nav]').forEach((b) => {
-    b.classList.toggle('active', !onDetail && b.dataset.nav === route);
+    b.classList.toggle('active', !onOverlay && b.dataset.nav === route);
   });
-  root.querySelector('.tabbar')?.classList.toggle('hidden', onDetail);
+  root.querySelector('.tabbar')?.classList.toggle('hidden', onOverlay);
 
-  document.title = onDetail
-    ? `Subscription · ${APP.name}`
-    : `${TABS.find((t) => t.id === route)?.label || APP.name} · ${APP.name}`;
+  document.title = onOverlay ? `Financer` : `${TABS.find((t) => t.id === route)?.label || 'Financer'} · Financer`;
 
   const main = document.getElementById('main');
   main.innerHTML = '';
@@ -82,14 +98,19 @@ function paint() {
   view.className = 'view';
   main.appendChild(view);
 
-  if (onDetail) {
-    renderDetail(view, ctx, detailId);
+  if (overlay?.type === 'catalog') {
+    renderCatalogDetail(view, ctx, overlay.id);
+    return;
+  }
+  if (overlay?.type === 'mysub') {
+    renderMySubDetail(view, ctx, overlay.id);
     return;
   }
 
   const map = {
     home: renderHome,
     subs: renderSubs,
+    spend: renderSpend,
     insights: renderInsights,
     more: renderMore
   };
